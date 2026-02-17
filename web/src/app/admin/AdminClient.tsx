@@ -75,6 +75,20 @@ export default function AdminClient({
     }
   }, []);
 
+  // 客户端加载用户数和评论数（所有 hooks 必须在条件 return 之前）
+  useEffect(() => {
+    if (!authed) return;
+    fetch(`${API_URL}/api/v1/stats/users`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setTotalUsers(String(data.total ?? data.count ?? "N/A")))
+      .catch(() => setTotalUsers("N/A"));
+
+    fetch(`${API_URL}/api/v1/stats/comments`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setTotalComments(String(data.total ?? data.count ?? "N/A")))
+      .catch(() => setTotalComments("N/A"));
+  }, [authed]);
+
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     const adminPwd = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "agentstore2026";
@@ -117,20 +131,7 @@ export default function AdminClient({
     );
   }
 
-  // 客户端加载用户数和评论数
-  useEffect(() => {
-    // 获取总用户数
-    fetch(`${API_URL}/api/v1/stats/users`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setTotalUsers(String(data.total ?? data.count ?? "N/A")))
-      .catch(() => setTotalUsers("N/A"));
 
-    // 获取总评论数
-    fetch(`${API_URL}/api/v1/stats/comments`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setTotalComments(String(data.total ?? data.count ?? "N/A")))
-      .catch(() => setTotalComments("N/A"));
-  }, []);
 
   // 百分比计算辅助函数
   const pct = (part: number, total: number) =>
