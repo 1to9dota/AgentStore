@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import ClientProviders from "@/components/ClientProviders";
 import Navbar from "@/components/Navbar";
+import ScrollToTop from "@/components/ScrollToTop";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -114,16 +117,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-black text-zinc-100 antialiased`}
       >
-        {/* 导航栏 */}
-        <Navbar />
+        <ClientProviders>
+          {/* 导航栏 */}
+          <Navbar />
 
-        {/* 页面内容 */}
-        <main>{children}</main>
+          {/* 页面内容 */}
+          <main className="animate-fade-in">{children}</main>
 
-        {/* 页脚 */}
-        <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-600">
-          <p>AgentStore — Agent 能力注册表 + 信誉系统</p>
-        </footer>
+          {/* 页脚 */}
+          <Footer />
+
+          {/* 回到顶部按钮 */}
+          <ScrollToTop />
+        </ClientProviders>
       </body>
     </html>
   );

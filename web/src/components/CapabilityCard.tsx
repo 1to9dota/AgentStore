@@ -34,7 +34,7 @@ export default function CapabilityCard({ capability }: CapabilityCardProps) {
   return (
     <Link
       href={`/capability/${slug}`}
-      className="group block rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 transition-all hover:border-zinc-700 hover:bg-zinc-900"
+      className="card-hover group block rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 transition-all hover:border-zinc-700 hover:bg-zinc-900"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

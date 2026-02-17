@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLocale } from "@/i18n";
+import LanguageSwitch from "./LanguageSwitch";
+import UserMenu from "./UserMenu";
 
 export default function Navbar() {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+  const { t } = useLocale();
 
   const handleSearch = () => {
     const q = query.trim();
@@ -38,13 +42,13 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* 桌面端：搜索框 + 链接 */}
+        {/* 桌面端：搜索框 + 链接 + 语言切换 */}
         <div className="hidden items-center gap-4 md:flex">
           {/* 导航搜索框 */}
           <div className="flex items-center gap-1.5">
             <input
               type="text"
-              placeholder="搜索..."
+              placeholder={t.home.search_placeholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -53,7 +57,7 @@ export default function Navbar() {
             <button
               onClick={handleSearch}
               className="rounded-lg bg-zinc-800 p-1.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
-              aria-label="搜索"
+              aria-label={t.nav.search}
             >
               <svg
                 className="h-4 w-4"
@@ -75,13 +79,19 @@ export default function Navbar() {
             href="/"
             className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
-            首页
+            {t.nav.home}
           </Link>
           <Link
             href="/stats"
             className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
-            数据面板
+            {t.nav.stats}
+          </Link>
+          <Link
+            href="/compare"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+          >
+            对比
           </Link>
           <a
             href="https://github.com"
@@ -91,6 +101,12 @@ export default function Navbar() {
           >
             GitHub
           </a>
+
+          {/* 语言切换按钮 */}
+          <LanguageSwitch />
+
+          {/* 用户菜单 */}
+          <UserMenu />
         </div>
 
         {/* 移动端：汉堡菜单按钮 */}
@@ -118,7 +134,7 @@ export default function Navbar() {
           <div className="mb-4 flex items-center gap-2">
             <input
               type="text"
-              placeholder="搜索 Agent 能力..."
+              placeholder={t.home.search_placeholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -128,7 +144,7 @@ export default function Navbar() {
               onClick={handleSearch}
               className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition-colors hover:bg-blue-500"
             >
-              搜索
+              {t.nav.search}
             </button>
           </div>
           <div className="flex flex-col gap-3">
@@ -137,14 +153,21 @@ export default function Navbar() {
               onClick={() => setMenuOpen(false)}
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
-              首页
+              {t.nav.home}
             </Link>
             <Link
               href="/stats"
               onClick={() => setMenuOpen(false)}
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
-              数据面板
+              {t.nav.stats}
+            </Link>
+            <Link
+              href="/compare"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              对比
             </Link>
             <a
               href="https://github.com"
@@ -154,6 +177,11 @@ export default function Navbar() {
             >
               GitHub
             </a>
+            {/* 移动端语言切换 + 用户菜单 */}
+            <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+              <LanguageSwitch />
+              <UserMenu />
+            </div>
           </div>
         </div>
       )}

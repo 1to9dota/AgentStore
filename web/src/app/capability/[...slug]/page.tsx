@@ -8,6 +8,9 @@ import {
 import { CATEGORIES, SCORE_LABELS, CapabilityScores } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
 import ScoreBadge from "@/components/ScoreBadge";
+import FavoriteButton from "@/components/FavoriteButton";
+import CompareButton from "@/components/CompareButton";
+import CommentSection from "@/components/CommentSection";
 
 // SSG: 预生成所有详情页（slug 含 / 需拆为数组）
 export function generateStaticParams() {
@@ -144,6 +147,8 @@ export default async function CapabilityDetailPage({
                 {cap.source.toUpperCase()}
               </span>
               <ScoreBadge score={cap.overall_score} label="总分" size="lg" />
+              <FavoriteButton slug={fullSlug} />
+              <CompareButton slug={fullSlug} />
             </div>
             <p className="mt-3 text-zinc-400 leading-relaxed">
               {cap.description}
@@ -214,6 +219,9 @@ export default async function CapabilityDetailPage({
               </p>
             </div>
           )}
+
+          {/* 用户评论区 */}
+          <CommentSection slug={fullSlug} />
         </div>
 
         {/* 右侧边栏 */}
