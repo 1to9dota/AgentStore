@@ -2,6 +2,7 @@
 
 补充 discover_mcp.py 覆盖不到的 MCP 插件。
 """
+import asyncio
 import os
 import httpx
 from .models import CapabilityEntry
@@ -80,6 +81,8 @@ async def discover_github_topics(limit: int = 200) -> list[CapabilityEntry]:
             except Exception as e:
                 print(f"  GitHub Topics 搜索异常 (query={query}): {e}")
                 continue
+            # 请求间隔，避免触发 GitHub abuse detection
+            await asyncio.sleep(2)
 
     print(f"  GitHub Topics 发现 {len(entries)} 个仓库")
     return entries[:limit]
@@ -124,7 +127,7 @@ async def discover_npm_mcp(limit: int = 200) -> list[CapabilityEntry]:
                     links = pkg.get("links", {})
                     repo_raw = links.get("repository", "") or ""
                     if "github.com" in repo_raw:
-                        repo_url = repo_raw
+                        repo_url = repo_raw.rstrip("/").removesuffix(".git")
 
                     # 用 npm 包名生成 slug，避免和 GitHub 来源冲突
                     slug_name = name.replace("/", "-").replace("@", "")

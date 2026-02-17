@@ -195,7 +195,7 @@ async def run_pipeline(
     all_entries: list[CapabilityEntry] = []
     for entry in raw_entries:
         # 用 repo_url 去重（归一化：去掉末尾斜杠，统一小写）
-        dedup_key = (entry.repo_url or "").rstrip("/").lower()
+        dedup_key = (entry.repo_url or "").rstrip("/").removesuffix(".git").lower()
         if not dedup_key:
             # 没有 repo_url 的条目用 slug 去重
             dedup_key = entry.slug

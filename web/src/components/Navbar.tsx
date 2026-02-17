@@ -100,7 +100,7 @@ export default function Navbar() {
             关于
           </Link>
           <a
-            href="https://github.com"
+            href="https://github.com/1to9dota/AgentStore"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
@@ -183,7 +183,7 @@ export default function Navbar() {
               关于
             </Link>
             <a
-              href="https://github.com"
+              href="https://github.com/1to9dota/AgentStore"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"

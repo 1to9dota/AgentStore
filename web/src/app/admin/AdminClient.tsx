@@ -59,9 +59,63 @@ export default function AdminClient({
   recentPlugins,
   lowScorePlugins,
 }: AdminClientProps) {
+  // 密码校验状态
+  const [authed, setAuthed] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+
   // 从 API 获取的动态数据
   const [totalUsers, setTotalUsers] = useState<string>("加载中...");
   const [totalComments, setTotalComments] = useState<string>("加载中...");
+
+  // 检查是否已通过校验（sessionStorage 缓存）
+  useEffect(() => {
+    if (sessionStorage.getItem("admin_authed") === "1") {
+      setAuthed(true);
+    }
+  }, []);
+
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    const adminPwd = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "agentstore2026";
+    if (password === adminPwd) {
+      setAuthed(true);
+      sessionStorage.setItem("admin_authed", "1");
+      setAuthError("");
+    } else {
+      setAuthError("密码错误");
+    }
+  };
+
+  // 未通过校验时显示密码输入界面
+  if (!authed) {
+    return (
+      <div className="mx-auto max-w-md px-6 py-20">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-8 text-center">
+          <div className="mb-4 text-4xl">🔒</div>
+          <h1 className="mb-2 text-xl font-bold text-zinc-100">管理后台</h1>
+          <p className="mb-6 text-sm text-zinc-500">请输入管理员密码</p>
+          <form onSubmit={handleAuth} className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="管理员密码"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 outline-none focus:border-blue-500"
+              autoFocus
+            />
+            {authError && <p className="text-sm text-red-400">{authError}</p>}
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-500"
+            >
+              进入
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   // 客户端加载用户数和评论数
   useEffect(() => {
