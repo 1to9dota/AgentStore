@@ -11,7 +11,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from .models import CapabilityEntry, CapabilityData, RepoData, AnalysisResult, Scores, ScanResult
 from .discover_openclaw import discover_openclaw_skills
-from .discover_mcp import discover_mcp_plugins
+from .discover_mcp import discover_mcp_plugins, discover_mcp_registry, discover_github_search
+from .discover_extra import discover_github_topics, discover_npm_mcp
 from .collect import collect_repo_data
 from .ai_analyzer import create_analyzer
 from .score import calculate_scores
@@ -131,7 +132,7 @@ async def _scan_all_repos(entries: list[CapabilityEntry]) -> list[ScanResult]:
 
 async def run_pipeline(
     openclaw_limit: int = 100,
-    mcp_limit: int = 200,
+    mcp_limit: int = 500,
     force: bool = False,
 ) -> list[dict]:
     token = os.getenv("GITHUB_TOKEN", "")
@@ -151,19 +152,59 @@ async def run_pipeline(
             existing_slugs = set()
 
     print("[1/6] 发现 Agent 能力...")
-    openclaw_entries: list[CapabilityEntry] = []
-    mcp_entries: list[CapabilityEntry] = []
-    if openclaw_limit > 0 and mcp_limit > 0:
-        openclaw_entries, mcp_entries = await asyncio.gather(
-            discover_openclaw_skills(limit=openclaw_limit),
-            discover_mcp_plugins(limit=mcp_limit),
-        )
-    elif openclaw_limit > 0:
-        openclaw_entries = await discover_openclaw_skills(limit=openclaw_limit)
-    elif mcp_limit > 0:
-        mcp_entries = await discover_mcp_plugins(limit=mcp_limit)
-    all_entries = openclaw_entries + mcp_entries
-    print(f"  发现 {len(openclaw_entries)} 个 OpenClaw skills + {len(mcp_entries)} 个 MCP plugins")
+
+    # 并行拉取所有数据源
+    discover_tasks = {}
+    if openclaw_limit > 0:
+        discover_tasks["openclaw"] = discover_openclaw_skills(limit=openclaw_limit)
+    if mcp_limit > 0:
+        # 核心数据源：awesome list + 官方仓库
+        discover_tasks["mcp_awesome"] = discover_mcp_plugins(limit=mcp_limit)
+        discover_tasks["mcp_official"] = discover_mcp_registry(limit=mcp_limit)
+        # 扩展数据源：GitHub 搜索 + Topics + npm
+        discover_tasks["mcp_github"] = discover_github_search(limit=300)
+        discover_tasks["mcp_topics"] = discover_github_topics(limit=200)
+        discover_tasks["mcp_npm"] = discover_npm_mcp(limit=200)
+
+    # 并行执行所有数据源抓取
+    task_names = list(discover_tasks.keys())
+    task_coros = list(discover_tasks.values())
+    results = await asyncio.gather(*task_coros, return_exceptions=True)
+
+    # 收集结果，跳过失败的数据源
+    source_results: dict[str, list[CapabilityEntry]] = {}
+    for name, result in zip(task_names, results):
+        if isinstance(result, Exception):
+            print(f"  数据源 {name} 失败: {result}")
+            source_results[name] = []
+        else:
+            source_results[name] = result
+
+    # 汇总并打印各数据源数量
+    for name, entries in source_results.items():
+        print(f"  {name}: {len(entries)} 条")
+
+    # 合并所有条目
+    raw_entries: list[CapabilityEntry] = []
+    for entries in source_results.values():
+        raw_entries.extend(entries)
+
+    # 用 repo_url 归一化去重（同一个 GitHub 仓库只保留第一次出现的）
+    # 优先级：awesome list > 官方仓库 > GitHub 搜索 > Topics > npm
+    seen_repos: set[str] = set()
+    all_entries: list[CapabilityEntry] = []
+    for entry in raw_entries:
+        # 用 repo_url 去重（归一化：去掉末尾斜杠，统一小写）
+        dedup_key = (entry.repo_url or "").rstrip("/").lower()
+        if not dedup_key:
+            # 没有 repo_url 的条目用 slug 去重
+            dedup_key = entry.slug
+        if dedup_key in seen_repos:
+            continue
+        seen_repos.add(dedup_key)
+        all_entries.append(entry)
+
+    print(f"  合并去重后共 {len(all_entries)} 个能力（原始 {len(raw_entries)} 条）")
 
     # 增量更新：过滤已存在的条目
     if not force and existing_slugs:

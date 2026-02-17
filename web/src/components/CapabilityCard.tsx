@@ -1,6 +1,43 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { Capability, CATEGORIES } from "@/lib/types";
 import ScoreBadge from "./ScoreBadge";
+
+/**
+ * 高亮文本中匹配的关键词
+ * 将匹配部分用 <mark> 标签包裹
+ */
+function HighlightText({ text, query }: { text: string; query?: string }) {
+  if (!query || !query.trim()) {
+    return <>{text}</>;
+  }
+
+  // 转义正则特殊字符，防止搜索词中的特殊字符导致报错
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escaped})`, "gi");
+  const parts = text.split(regex);
+
+  if (parts.length === 1) {
+    return <>{text}</>;
+  }
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark
+            key={i}
+            className="rounded-sm bg-yellow-500/30 text-yellow-200 px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          <Fragment key={i}>{part}</Fragment>
+        )
+      )}
+    </>
+  );
+}
 
 // 语言 -> 颜色映射
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -21,9 +58,11 @@ const DEFAULT_LANG_COLOR = "bg-zinc-500/20 text-zinc-400 border-zinc-500/30";
 
 interface CapabilityCardProps {
   capability: Capability;
+  /** 搜索关键词，传入后会高亮匹配文本 */
+  highlightQuery?: string;
 }
 
-export default function CapabilityCard({ capability }: CapabilityCardProps) {
+export default function CapabilityCard({ capability, highlightQuery }: CapabilityCardProps) {
   const { slug, name, one_liner, source, overall_score, category, stars, language, provider } =
     capability;
 
@@ -40,7 +79,7 @@ export default function CapabilityCard({ capability }: CapabilityCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-lg font-semibold text-zinc-100 group-hover:text-blue-400 transition-colors">
-              {name}
+              <HighlightText text={name} query={highlightQuery} />
             </h3>
             {/* 来源标签 */}
             <span
@@ -54,7 +93,7 @@ export default function CapabilityCard({ capability }: CapabilityCardProps) {
             </span>
           </div>
           <p className="mt-1.5 text-sm text-zinc-400 line-clamp-2">
-            {one_liner}
+            <HighlightText text={one_liner} query={highlightQuery} />
           </p>
         </div>
         <ScoreBadge score={overall_score} size="md" />

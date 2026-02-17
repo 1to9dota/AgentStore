@@ -100,6 +100,10 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="dark">
       <head>
+        {/* DNS 预解析：加速 API 请求 */}
+        <link rel="dns-prefetch" href="//api.agentstore.dev" />
+        <link rel="preconnect" href="https://api.agentstore.dev" crossOrigin="anonymous" />
+
         {/* 结构化数据 JSON-LD */}
         <script
           type="application/ld+json"

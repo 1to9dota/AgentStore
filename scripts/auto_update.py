@@ -41,26 +41,51 @@ def _load_existing_data() -> tuple[list[dict], set[str]]:
 
 async def _discover_all(
     openclaw_limit: int = 100,
-    mcp_limit: int = 200,
+    mcp_limit: int = 500,
 ) -> list:
-    """调用 discover 模块获取最新的插件列表"""
+    """调用所有 discover 模块获取最新的插件列表（多数据源 + 去重）"""
     from .discover_openclaw import discover_openclaw_skills
-    from .discover_mcp import discover_mcp_plugins
+    from .discover_mcp import discover_mcp_plugins, discover_mcp_registry, discover_github_search
+    from .discover_extra import discover_github_topics, discover_npm_mcp
 
-    openclaw_entries = []
-    mcp_entries = []
+    # 并行拉取所有数据源
+    discover_tasks = {}
+    if openclaw_limit > 0:
+        discover_tasks["openclaw"] = discover_openclaw_skills(limit=openclaw_limit)
+    if mcp_limit > 0:
+        discover_tasks["mcp_awesome"] = discover_mcp_plugins(limit=mcp_limit)
+        discover_tasks["mcp_official"] = discover_mcp_registry(limit=mcp_limit)
+        discover_tasks["mcp_github"] = discover_github_search(limit=300)
+        discover_tasks["mcp_topics"] = discover_github_topics(limit=200)
+        discover_tasks["mcp_npm"] = discover_npm_mcp(limit=200)
 
-    if openclaw_limit > 0 and mcp_limit > 0:
-        openclaw_entries, mcp_entries = await asyncio.gather(
-            discover_openclaw_skills(limit=openclaw_limit),
-            discover_mcp_plugins(limit=mcp_limit),
-        )
-    elif openclaw_limit > 0:
-        openclaw_entries = await discover_openclaw_skills(limit=openclaw_limit)
-    elif mcp_limit > 0:
-        mcp_entries = await discover_mcp_plugins(limit=mcp_limit)
+    task_names = list(discover_tasks.keys())
+    task_coros = list(discover_tasks.values())
+    results = await asyncio.gather(*task_coros, return_exceptions=True)
 
-    return openclaw_entries + mcp_entries
+    # 收集结果，跳过失败的数据源
+    raw_entries = []
+    for name, result in zip(task_names, results):
+        if isinstance(result, Exception):
+            print(f"  数据源 {name} 失败: {result}")
+        else:
+            print(f"  {name}: {len(result)} 条")
+            raw_entries.extend(result)
+
+    # 用 repo_url 归一化去重（同一个 GitHub 仓库只保留第一次出现的）
+    seen_repos: set[str] = set()
+    all_entries = []
+    for entry in raw_entries:
+        dedup_key = (entry.repo_url or "").rstrip("/").lower()
+        if not dedup_key:
+            dedup_key = entry.slug
+        if dedup_key in seen_repos:
+            continue
+        seen_repos.add(dedup_key)
+        all_entries.append(entry)
+
+    print(f"  合并去重后共 {len(all_entries)} 个（原始 {len(raw_entries)} 条）")
+    return all_entries
 
 
 async def _process_new_entries(new_entries: list) -> list[dict]:
@@ -199,7 +224,7 @@ async def auto_update(
     force: bool = False,
     dry_run: bool = False,
     openclaw_limit: int = 100,
-    mcp_limit: int = 200,
+    mcp_limit: int = 500,
 ):
     """自动增量更新主函数
 
@@ -323,8 +348,8 @@ def main():
     parser.add_argument(
         "--mcp-limit",
         type=int,
-        default=200,
-        help="MCP 数据源最大抓取数量（默认 200）",
+        default=500,
+        help="MCP 数据源最大抓取数量（默认 500）",
     )
     args = parser.parse_args()
 
