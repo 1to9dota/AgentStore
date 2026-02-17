@@ -3,7 +3,7 @@
 # 每天凌晨 3 点执行增量更新，日志写入 data/cron.log
 set -e
 
-PROJECT_DIR="/Users/zekunmac/_HUB_LOCAL/AgentStore"
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PYTHON_BIN="$(which python3 || which python)"
 CRON_LOG="$PROJECT_DIR/data/cron.log"
 
@@ -14,7 +14,7 @@ mkdir -p "$PROJECT_DIR/data"
 # - 加载 .env 环境变量（GITHUB_TOKEN、OPENAI_API_KEY 等）
 # - 每天凌晨 3:00 执行增量更新
 # - 输出追加到 cron.log
-CRON_CMD="0 3 * * * cd $PROJECT_DIR && set -a && source $PROJECT_DIR/.env && set +a && $PYTHON_BIN -m scripts.auto_update >> $CRON_LOG 2>&1"
+CRON_CMD="0 3 * * * cd $PROJECT_DIR && set -a && . $PROJECT_DIR/.env && set +a && $PYTHON_BIN -m scripts.auto_update >> $CRON_LOG 2>&1"
 
 # 检查是否已存在该 cron 任务
 EXISTING=$(crontab -l 2>/dev/null || true)

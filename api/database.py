@@ -12,6 +12,8 @@ def _get_db_path() -> str:
 def _get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(_get_db_path())
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")  # 并发读写不阻塞
+    conn.execute("PRAGMA busy_timeout=5000")  # 锁等待 5 秒
     return conn
 
 

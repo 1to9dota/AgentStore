@@ -12,7 +12,11 @@ from pydantic import BaseModel, Field
 from .database import _get_conn
 
 # ── 配置 ──────────────────────────────────────────────
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "agentstore-dev-secret-change-in-prod")
+_default_secret = os.urandom(32).hex()  # 未配置时随机生成（重启后旧 token 失效）
+SECRET_KEY = os.getenv("JWT_SECRET_KEY") or _default_secret
+if not os.getenv("JWT_SECRET_KEY"):
+    import warnings
+    warnings.warn("JWT_SECRET_KEY 未配置，使用随机密钥（重启后所有 token 失效）", stacklevel=1)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 小时
 
@@ -24,7 +28,7 @@ router = APIRouter(tags=["users"])
 
 # ── Pydantic 模型 ──────────────────────────────────────
 class RegisterRequest(BaseModel):
-    username: str = Field(..., min_length=2, max_length=32)
+    username: str = Field(..., min_length=2, max_length=32, pattern=r"^[a-zA-Z0-9_\-\u4e00-\u9fff]+$")
     password: str = Field(..., min_length=6, max_length=128)
 
 
@@ -197,9 +201,19 @@ def list_favorites(user: dict = Depends(_get_current_user)):
 # ── 评论路由 ──────────────────────────────────────────
 @router.post("/api/v1/comments/{slug}", response_model=CommentOut)
 def create_comment(slug: str, req: CommentRequest, user: dict = Depends(_get_current_user)):
-    """发表评论"""
+    """发表评论（同一用户对同一插件每分钟限 1 条）"""
     conn = _get_conn()
     try:
+        # 频率限制：同一用户对同一插件每分钟限 1 条
+        recent = conn.execute(
+            """SELECT id FROM comments
+               WHERE user_id = ? AND capability_slug = ?
+               AND created_at > datetime('now', '-1 minute')""",
+            (user["id"], slug),
+        ).fetchone()
+        if recent:
+            raise HTTPException(status_code=429, detail="评论太频繁，请稍后再试")
+
         cursor = conn.execute(
             "INSERT INTO comments (user_id, capability_slug, content, rating) VALUES (?, ?, ?, ?)",
             (user["id"], slug, req.content, req.rating),

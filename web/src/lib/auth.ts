@@ -61,8 +61,12 @@ export async function register(
     throw new Error(err.detail || "注册失败");
   }
 
-  // 注册成功后自动登录
-  return login(username, password);
+  // 注册接口已返回 token，直接使用
+  const data: AuthResponse = await res.json();
+  localStorage.setItem(TOKEN_KEY, data.access_token);
+  const user = await fetchCurrentUser(data.access_token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  return user;
 }
 
 /**

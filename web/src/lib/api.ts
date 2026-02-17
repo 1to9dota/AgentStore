@@ -9,6 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 /**
  * 带认证 header 的 fetch 封装
+ * 401 时自动清除过期 token
  */
 export async function fetchWithAuth(
   url: string,
@@ -24,7 +25,15 @@ export async function fetchWithAuth(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  return fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
+
+  // Token 过期或无效时自动清除登录状态
+  if (res.status === 401 && token) {
+    const { logout } = await import("./auth");
+    logout();
+  }
+
+  return res;
 }
 
 // ========== 收藏相关 ==========
