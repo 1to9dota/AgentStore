@@ -63,8 +63,22 @@ class Scores:
 
 
 @dataclass
+class ScanResult:
+    """安全扫描结果"""
+    tool: str = ""                    # 扫描工具名
+    vulnerabilities: int = 0          # 漏洞数量
+    severity_high: int = 0            # 高危数量
+    severity_medium: int = 0          # 中危数量
+    severity_low: int = 0             # 低危数量
+    permissions: list = field(default_factory=list)  # 检测到的权限列表
+    has_api_keys: bool = False        # 是否检测到泄露的 API key
+    details: str = ""                 # 详细报告文本
+
+
+@dataclass
 class CapabilityData:
     """评分引擎的输入（组合 RepoData + AnalysisResult）"""
     entry: CapabilityEntry
     repo: RepoData = field(default_factory=RepoData)
     analysis: AnalysisResult = field(default_factory=AnalysisResult)
+    scan: ScanResult = field(default_factory=ScanResult)

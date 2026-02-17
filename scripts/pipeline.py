@@ -1,18 +1,22 @@
 """AgentStore 数据管线
 
-流程: discover → collect → analyze → score → output
+流程: discover → collect → scan → analyze → score → output
 """
 import asyncio
 import json
 import os
+import shutil
+import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
-from .models import CapabilityEntry, CapabilityData, RepoData, AnalysisResult, Scores
+from .models import CapabilityEntry, CapabilityData, RepoData, AnalysisResult, Scores, ScanResult
 from .discover_openclaw import discover_openclaw_skills
 from .discover_mcp import discover_mcp_plugins
 from .collect import collect_repo_data
 from .ai_analyzer import create_analyzer
 from .score import calculate_scores
+from .category_cleaner import clean_category
+from .scanner import run_all_scanners
 
 load_dotenv()
 
@@ -30,7 +34,7 @@ def assemble_output(
         "source_id": entry.source_id,
         "provider": entry.provider,
         "description": entry.description,
-        "category": analysis.category_suggestion or entry.category,
+        "category": clean_category(analysis.category_suggestion or entry.category),
         "repo_url": entry.repo_url,
         "endpoint": entry.endpoint,
         "protocol": entry.protocol,
@@ -58,6 +62,73 @@ def assemble_output(
     }
 
 
+async def _scan_all_repos(entries: list[CapabilityEntry]) -> list[ScanResult]:
+    """对所有有 repo_url 的条目执行安全扫描
+
+    - 浅克隆仓库到临时目录
+    - 用 Semaphore 控制最多 3 个并发克隆
+    - 扫描完成后删除临时目录
+    """
+    clone_sem = asyncio.Semaphore(3)
+    scan_base = Path(tempfile.gettempdir()) / "agentstore-scan"
+    scan_base.mkdir(exist_ok=True)
+
+    async def _scan_one(entry: CapabilityEntry) -> ScanResult:
+        if not entry.repo_url:
+            return ScanResult(details="无仓库地址，跳过扫描")
+
+        repo_dir = scan_base / entry.slug
+        async with clone_sem:
+            # 浅克隆
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "git", "clone", "--depth", "1", "--quiet",
+                    entry.repo_url, str(repo_dir),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
+                if proc.returncode != 0:
+                    return ScanResult(
+                        details=f"克隆失败: {stderr.decode(errors='ignore')[:200]}"
+                    )
+            except asyncio.TimeoutError:
+                return ScanResult(details="克隆超时")
+            except Exception as e:
+                return ScanResult(details=f"克隆异常: {e}")
+
+            # 扫描
+            try:
+                result = await run_all_scanners(str(repo_dir))
+            except Exception as e:
+                result = ScanResult(details=f"扫描异常: {e}")
+
+            # 清理
+            try:
+                shutil.rmtree(repo_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+            return result
+
+    results = await asyncio.gather(
+        *[_scan_one(e) for e in entries],
+        return_exceptions=True,
+    )
+
+    # 将异常转换为空 ScanResult
+    final: list[ScanResult] = []
+    for r in results:
+        if isinstance(r, ScanResult):
+            final.append(r)
+        else:
+            final.append(ScanResult(details=f"扫描任务异常: {r}"))
+
+    scanned = sum(1 for r in final if r.tool)
+    print(f"  扫描完成：{scanned}/{len(entries)} 个仓库")
+    return final
+
+
 async def run_pipeline(
     openclaw_limit: int = 100,
     mcp_limit: int = 200,
@@ -79,7 +150,7 @@ async def run_pipeline(
             existing_data = []
             existing_slugs = set()
 
-    print("[1/5] 发现 Agent 能力...")
+    print("[1/6] 发现 Agent 能力...")
     openclaw_entries: list[CapabilityEntry] = []
     mcp_entries: list[CapabilityEntry] = []
     if openclaw_limit > 0 and mcp_limit > 0:
@@ -101,10 +172,13 @@ async def run_pipeline(
         print(f"  跳过 {skipped} 个已有能力，新增 {len(new_entries)} 个")
         all_entries = new_entries
 
-    print("[2/5] 采集 GitHub 数据...")
+    print("[2/6] 采集 GitHub 数据...")
     all_repos = await collect_repo_data(all_entries, token=token)
 
-    print(f"[3/5] AI 分析（{provider}）...")
+    print("[3/6] 安全扫描...")
+    all_scans = await _scan_all_repos(all_entries)
+
+    print(f"[4/6] AI 分析（{provider}）...")
     analyzer_kwargs = {}
     if provider == "openai":
         analyzer_kwargs["api_key"] = os.getenv("OPENAI_API_KEY", "")
@@ -130,14 +204,14 @@ async def run_pipeline(
         *[_analyze_one(e, r) for e, r in zip(all_entries, all_repos)]
     )
 
-    print("[4/5] 计算评分...")
+    print("[5/6] 计算评分...")
     data_list = [
-        CapabilityData(entry=e, repo=r, analysis=a)
-        for e, r, a in zip(all_entries, all_repos, all_analyses)
+        CapabilityData(entry=e, repo=r, analysis=a, scan=sc)
+        for e, r, a, sc in zip(all_entries, all_repos, all_analyses, all_scans)
     ]
     all_scores = calculate_scores(data_list)
 
-    print("[5/5] 生成输出...")
+    print("[6/6] 生成输出...")
     new_results = [
         assemble_output(e, r, a, s)
         for e, r, a, s in zip(all_entries, all_repos, all_analyses, all_scores)

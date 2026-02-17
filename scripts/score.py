@@ -44,14 +44,39 @@ def _score_reliability(data: CapabilityData) -> float:
 
 
 def _score_safety(data: CapabilityData) -> float:
-    """安全性 = AI 审计评估 (85%) + 代码质量指标 (15%)"""
-    ai_part = data.analysis.safety_score * 0.85
-    code_bonus = 0.0
-    if data.repo.has_tests:
-        code_bonus += 1.0
-    if data.repo.has_typescript:
-        code_bonus += 0.5
-    return _clamp(ai_part + code_bonus)
+    """安全性评分
+
+    有扫描结果时：扫描结果 60% + AI 分析 40%
+    无扫描结果时：保持原来的纯 AI 评分（85% AI + 15% 代码指标）
+    """
+    scan = data.scan
+
+    # 判断是否有有效的扫描结果（tool 不为空说明至少有一个扫描器跑过）
+    has_scan = bool(scan.tool)
+
+    if has_scan:
+        # ---- 扫描分（60%）----
+        scan_score = 10.0
+        scan_score -= scan.severity_high * 2.0    # 每个高危 -2 分
+        scan_score -= scan.severity_medium * 1.0  # 每个中危 -1 分
+        scan_score -= scan.severity_low * 0.3     # 每个低危 -0.3 分
+        if scan.has_api_keys:
+            scan_score -= 3.0                     # 检测到 API key 泄露 -3 分
+        scan_score = _clamp(scan_score)
+
+        # ---- AI 分（40%）----
+        ai_score = data.analysis.safety_score
+
+        return _clamp(scan_score * 0.6 + ai_score * 0.4)
+    else:
+        # 无扫描结果，退化为纯 AI 评分
+        ai_part = data.analysis.safety_score * 0.85
+        code_bonus = 0.0
+        if data.repo.has_tests:
+            code_bonus += 1.0
+        if data.repo.has_typescript:
+            code_bonus += 0.5
+        return _clamp(ai_part + code_bonus)
 
 
 def _score_capability(data: CapabilityData) -> float:
