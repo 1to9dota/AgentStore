@@ -1,7 +1,8 @@
 """AgentStore REST API"""
+import math
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from .database import search_capabilities, get_capability, get_categories, init_db
+from .database import search_capabilities, get_capability, get_categories, get_stats, init_db
 
 app = FastAPI(
     title="AgentStore API",
@@ -23,9 +24,25 @@ def startup():
 
 
 @app.get("/api/v1/search")
-def api_search(q: str = "", category: str = "", limit: int = 20):
-    results = search_capabilities(q=q, category=category, limit=limit)
-    return {"results": results, "total": len(results)}
+def api_search(
+    q: str = "",
+    category: str = "",
+    sort: str = "overall_score",
+    order: str = "desc",
+    page: int = 1,
+    per_page: int = 20,
+):
+    data = search_capabilities(
+        q=q, category=category, sort_by=sort, order=order, page=page, per_page=per_page
+    )
+    total_pages = math.ceil(data["total"] / per_page) if per_page > 0 else 1
+    return {
+        "results": data["items"],
+        "total": data["total"],
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+    }
 
 
 @app.get("/api/v1/capabilities/{slug}")
@@ -50,6 +67,11 @@ def api_categories():
 
 
 @app.get("/api/v1/rankings")
-def api_rankings(category: str = "", sort: str = "overall_score", limit: int = 50):
-    results = search_capabilities(category=category, limit=limit)
-    return {"results": results, "total": len(results)}
+def api_rankings(category: str = "", sort: str = "overall_score", order: str = "desc", limit: int = 50):
+    data = search_capabilities(category=category, sort_by=sort, order=order, limit=limit)
+    return {"results": data["items"], "total": data["total"]}
+
+
+@app.get("/api/v1/stats")
+def api_stats():
+    return get_stats()

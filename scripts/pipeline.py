@@ -60,18 +60,46 @@ def assemble_output(
 
 async def run_pipeline(
     openclaw_limit: int = 100,
-    mcp_limit: int = 100,
+    mcp_limit: int = 200,
+    force: bool = False,
 ) -> list[dict]:
     token = os.getenv("GITHUB_TOKEN", "")
     provider = os.getenv("AI_PROVIDER", "openai")
 
+    # 读取已有数据，用于增量更新
+    existing_data: list[dict] = []
+    existing_slugs: set[str] = set()
+    out_dir = Path(__file__).parent.parent / "data"
+    out_file = out_dir / "capabilities.json"
+    if not force and out_file.exists():
+        try:
+            existing_data = json.loads(out_file.read_text())
+            existing_slugs = {item["slug"] for item in existing_data if "slug" in item}
+        except (json.JSONDecodeError, KeyError):
+            existing_data = []
+            existing_slugs = set()
+
     print("[1/5] 发现 Agent 能力...")
-    openclaw_entries, mcp_entries = await asyncio.gather(
-        discover_openclaw_skills(limit=openclaw_limit),
-        discover_mcp_plugins(limit=mcp_limit),
-    )
+    openclaw_entries: list[CapabilityEntry] = []
+    mcp_entries: list[CapabilityEntry] = []
+    if openclaw_limit > 0 and mcp_limit > 0:
+        openclaw_entries, mcp_entries = await asyncio.gather(
+            discover_openclaw_skills(limit=openclaw_limit),
+            discover_mcp_plugins(limit=mcp_limit),
+        )
+    elif openclaw_limit > 0:
+        openclaw_entries = await discover_openclaw_skills(limit=openclaw_limit)
+    elif mcp_limit > 0:
+        mcp_entries = await discover_mcp_plugins(limit=mcp_limit)
     all_entries = openclaw_entries + mcp_entries
     print(f"  发现 {len(openclaw_entries)} 个 OpenClaw skills + {len(mcp_entries)} 个 MCP plugins")
+
+    # 增量更新：过滤已存在的条目
+    if not force and existing_slugs:
+        new_entries = [e for e in all_entries if e.slug not in existing_slugs]
+        skipped = len(all_entries) - len(new_entries)
+        print(f"  跳过 {skipped} 个已有能力，新增 {len(new_entries)} 个")
+        all_entries = new_entries
 
     print("[2/5] 采集 GitHub 数据...")
     all_repos = await collect_repo_data(all_entries, token=token)
@@ -110,15 +138,24 @@ async def run_pipeline(
     all_scores = calculate_scores(data_list)
 
     print("[5/5] 生成输出...")
-    results = [
+    new_results = [
         assemble_output(e, r, a, s)
         for e, r, a, s in zip(all_entries, all_repos, all_analyses, all_scores)
     ]
+
+    # 合并已有数据和新数据
+    if not force and existing_data:
+        # 用新结果的 slug 集合，避免重复
+        new_slugs = {item["slug"] for item in new_results}
+        merged = [item for item in existing_data if item["slug"] not in new_slugs]
+        merged.extend(new_results)
+        results = merged
+    else:
+        results = new_results
+
     results.sort(key=lambda x: x["overall_score"], reverse=True)
 
-    out_dir = Path(__file__).parent.parent / "data"
     out_dir.mkdir(exist_ok=True)
-    out_file = out_dir / "capabilities.json"
     out_file.write_text(json.dumps(results, ensure_ascii=False, indent=2))
 
     web_data = Path(__file__).parent.parent / "web" / "data"

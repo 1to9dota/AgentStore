@@ -2,13 +2,34 @@ import Link from "next/link";
 import { Capability, CATEGORIES } from "@/lib/types";
 import ScoreBadge from "./ScoreBadge";
 
+// 语言 -> 颜色映射
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  JavaScript: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  Python: "bg-green-500/20 text-green-400 border-green-500/30",
+  Rust: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  Go: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+  Java: "bg-red-500/20 text-red-400 border-red-500/30",
+  "C#": "bg-violet-500/20 text-violet-400 border-violet-500/30",
+  Ruby: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+  PHP: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+  Swift: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  Kotlin: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+};
+
+const DEFAULT_LANG_COLOR = "bg-zinc-500/20 text-zinc-400 border-zinc-500/30";
+
 interface CapabilityCardProps {
   capability: Capability;
 }
 
 export default function CapabilityCard({ capability }: CapabilityCardProps) {
-  const { slug, name, one_liner, source, overall_score, category, stars } =
+  const { slug, name, one_liner, source, overall_score, category, stars, language, provider } =
     capability;
+
+  const langColor = language
+    ? LANGUAGE_COLORS[language] || DEFAULT_LANG_COLOR
+    : null;
 
   return (
     <Link
@@ -39,11 +60,21 @@ export default function CapabilityCard({ capability }: CapabilityCardProps) {
         <ScoreBadge score={overall_score} size="md" />
       </div>
 
-      <div className="mt-4 flex items-center gap-3 text-xs text-zinc-500">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
         {/* 分类 */}
         <span className="rounded-md bg-zinc-800 px-2 py-0.5">
           {CATEGORIES[category] || category}
         </span>
+
+        {/* 语言标签（彩色） */}
+        {language && langColor && (
+          <span
+            className={`rounded-md border px-2 py-0.5 text-xs font-medium ${langColor}`}
+          >
+            {language}
+          </span>
+        )}
+
         {/* Star 数 */}
         <span className="flex items-center gap-1">
           <svg
@@ -55,10 +86,11 @@ export default function CapabilityCard({ capability }: CapabilityCardProps) {
           </svg>
           {stars.toLocaleString()}
         </span>
-        {/* 语言 */}
-        {capability.language && (
-          <span className="text-zinc-500">{capability.language}</span>
-        )}
+
+        {/* Provider 名 */}
+        <span className="text-zinc-600">
+          by {provider}
+        </span>
       </div>
     </Link>
   );

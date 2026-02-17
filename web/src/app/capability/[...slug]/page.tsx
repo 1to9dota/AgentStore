@@ -8,16 +8,16 @@ import { CATEGORIES, SCORE_LABELS, CapabilityScores } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
 import ScoreBadge from "@/components/ScoreBadge";
 
-// SSG: 预生成所有详情页
+// SSG: 预生成所有详情页（slug 含 / 需拆为数组）
 export function generateStaticParams() {
-  return getAllCapabilities().map((c) => ({ slug: c.slug }));
+  return getAllCapabilities().map((c) => ({ slug: c.slug.split("/") }));
 }
 
 // 动态 metadata
-export function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  // Next.js 16 中 params 是 Promise，但 generateMetadata 可以是 async
+export function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }) {
   return params.then(({ slug }) => {
-    const cap = getCapabilityBySlug(slug);
+    const fullSlug = slug.join("/");
+    const cap = getCapabilityBySlug(fullSlug);
     if (!cap) return { title: "Not Found" };
     return {
       title: `${cap.name} - AgentStore`,
@@ -61,10 +61,11 @@ function ScoreBar({
 export default async function CapabilityDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string[] }>;
 }) {
   const { slug } = await params;
-  const cap = getCapabilityBySlug(slug);
+  const fullSlug = slug.join("/");
+  const cap = getCapabilityBySlug(fullSlug);
   if (!cap) notFound();
 
   const dimensions = Object.keys(SCORE_LABELS) as (keyof CapabilityScores)[];

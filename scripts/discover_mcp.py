@@ -3,8 +3,8 @@ import re
 import httpx
 from .models import CapabilityEntry
 
-_ENTRY_RE = r"-\s+\[([^\]]+)\]\(https://github\.com/([^/]+)/([^/)]+)\)\s*[^-]*-\s*(.*)"
-_CATEGORY_RE = r"^##\s+(.+)$"
+_ENTRY_RE = r"-\s+\[([^\]]+)\]\(https://github\.com/([^/]+)/([^/\s)]+)[^)]*\)\s*(.+)"
+_CATEGORY_RE = r"^###?\s+.*?(?:<a[^>]*></a>)?(.+)$"
 _AWESOME_URL = "https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md"
 
 
@@ -16,12 +16,21 @@ def parse_awesome_list(md: str) -> list[CapabilityEntry]:
     for line in md.splitlines():
         cat_match = re.match(_CATEGORY_RE, line)
         if cat_match:
-            current_category = cat_match.group(1).strip()
+            raw_cat = cat_match.group(1).strip()
+            # 去掉 emoji 和多余空白
+            raw_cat = re.sub(r'[^\w\s&/-]', '', raw_cat).strip()
+            if raw_cat:
+                current_category = raw_cat
             continue
 
         entry_match = re.match(_ENTRY_RE, line)
         if entry_match:
-            name, owner, repo, desc = entry_match.groups()
+            name, owner, repo, rest = entry_match.groups()
+            # repo 可能带 # 锚点，去掉
+            repo = repo.split("#")[0].rstrip("/")
+            # 描述在最后一个 " - " 之后（前面是 emoji 标记）
+            desc_match = re.search(r'\s-\s(.+)$', rest)
+            desc = desc_match.group(1).strip() if desc_match else rest.strip()
             slug = f"mcp-{owner}-{repo}".lower()
             if slug in seen:
                 continue

@@ -1,8 +1,37 @@
+# Python
 __pycache__/
 *.pyc
-.env
-*.db
+*.pyo
 .venv/
+*.egg-info/
+
+# 环境变量（包含 API key，绝对不能提交）
+.env
+
+# 数据库（运行时生成）
+*.db
+
+# Node.js
 node_modules/
 .next/
+
+# 生成的数据文件（根目录 data/ 由 pipeline 生成，不提交）
 data/*.json
+# 但前端需要的数据文件需要提交（在 web/.gitignore 中不排除）
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pytest
+.pytest_cache/
+
+# Vercel
+.vercel
+
+# Claude Code 上下文文件（自动生成，不提交）
+**/CLAUDE.md

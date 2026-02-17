@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CapabilityCard from "@/components/CapabilityCard";
 import { Capability, CATEGORIES } from "@/lib/types";
@@ -11,19 +12,7 @@ interface HomeClientProps {
 
 export default function HomeClient({ capabilities }: HomeClientProps) {
   const [query, setQuery] = useState("");
-
-  // 客户端搜索过滤
-  const filtered = useMemo(() => {
-    if (!query.trim()) return capabilities;
-    const q = query.toLowerCase();
-    return capabilities.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.one_liner.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q)
-    );
-  }, [query, capabilities]);
+  const router = useRouter();
 
   // 按分数排序的 Top 列表
   const topCapabilities = useMemo(
@@ -37,7 +26,19 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
     return Object.entries(CATEGORIES).filter(([key]) => cats.has(key));
   }, [capabilities]);
 
-  const displayList = query.trim() ? filtered : topCapabilities;
+  // 搜索跳转
+  const handleSearch = () => {
+    const q = query.trim();
+    if (q) {
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -59,31 +60,36 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
           </p>
 
           {/* 搜索栏 */}
-          <div className="mt-8">
+          <div className="mt-8 flex items-center justify-center gap-2">
             <input
               type="text"
               placeholder="搜索 Agent 能力..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-800/80 px-5 py-3 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
+            <button
+              onClick={handleSearch}
+              className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+            >
+              搜索
+            </button>
           </div>
         </div>
       </section>
 
-      {/* 搜索结果或 Top 列表 */}
+      {/* Top 列表 */}
       <section className="mx-auto max-w-5xl px-6 py-12">
         <h2 className="mb-6 text-xl font-semibold text-zinc-200">
-          {query.trim()
-            ? `搜索结果 (${filtered.length})`
-            : "Top Agent 能力"}
+          Top Agent 能力
         </h2>
 
-        {displayList.length === 0 ? (
-          <p className="text-zinc-500">没有找到匹配的结果</p>
+        {topCapabilities.length === 0 ? (
+          <p className="text-zinc-500">暂无数据</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {displayList.map((cap) => (
+            {topCapabilities.map((cap) => (
               <CapabilityCard key={cap.slug} capability={cap} />
             ))}
           </div>
@@ -91,7 +97,7 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
       </section>
 
       {/* 分类导航 */}
-      {!query.trim() && activeCategories.length > 0 && (
+      {activeCategories.length > 0 && (
         <section className="mx-auto max-w-5xl px-6 pb-16">
           <h2 className="mb-6 text-xl font-semibold text-zinc-200">
             按分类浏览

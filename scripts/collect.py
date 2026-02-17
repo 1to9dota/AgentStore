@@ -11,6 +11,36 @@ _TEST_DIRS = frozenset({
     "pytest.ini", "jest.config.js", "vitest.config.ts",
 })
 
+_MAX_RETRIES = 3
+_BACKOFF_SECONDS = [1, 2, 4]
+
+
+async def _request_with_retry(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
+    """带 3 次重试 + exponential backoff 的 HTTP 请求，处理 403 rate limit"""
+    for attempt in range(_MAX_RETRIES):
+        try:
+            resp = await client.get(url, **kwargs)
+            if resp.status_code == 403:
+                # GitHub rate limit
+                remaining = resp.headers.get("X-RateLimit-Remaining", "?")
+                reset_at = resp.headers.get("X-RateLimit-Reset", "?")
+                print(f"  ⚠ GitHub 403 rate limit: 剩余额度={remaining}, 重置时间={reset_at}")
+                if attempt < _MAX_RETRIES - 1:
+                    wait = _BACKOFF_SECONDS[attempt]
+                    print(f"    等待 {wait}s 后重试 ({attempt + 1}/{_MAX_RETRIES})...")
+                    await asyncio.sleep(wait)
+                    continue
+            return resp
+        except (httpx.TimeoutException, httpx.ConnectError) as e:
+            if attempt < _MAX_RETRIES - 1:
+                wait = _BACKOFF_SECONDS[attempt]
+                print(f"  ⚠ 请求失败: {e}, 等待 {wait}s 后重试 ({attempt + 1}/{_MAX_RETRIES})...")
+                await asyncio.sleep(wait)
+            else:
+                raise
+    # 不应到达这里，但兜底返回最后一次的响应
+    return resp  # type: ignore
+
 
 def _parse_owner_repo(url: str) -> tuple[str, str] | None:
     if not url or "github.com" not in url:
@@ -25,11 +55,11 @@ async def fetch_repo_data(owner: str, repo: str, *, token: str) -> RepoData:
     headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
     async with httpx.AsyncClient(base_url="https://api.github.com", headers=headers, timeout=15) as client:
         repo_resp, contrib_resp, issues_resp, readme_resp, contents_resp = await asyncio.gather(
-            client.get(f"/repos/{owner}/{repo}"),
-            client.get(f"/repos/{owner}/{repo}/contributors", params={"per_page": 1}),
-            client.get(f"/repos/{owner}/{repo}/issues", params={"state": "closed", "per_page": 1}),
-            client.get(f"/repos/{owner}/{repo}/readme"),
-            client.get(f"/repos/{owner}/{repo}/contents"),
+            _request_with_retry(client, f"/repos/{owner}/{repo}"),
+            _request_with_retry(client, f"/repos/{owner}/{repo}/contributors", params={"per_page": 1}),
+            _request_with_retry(client, f"/repos/{owner}/{repo}/issues", params={"state": "closed", "per_page": 1}),
+            _request_with_retry(client, f"/repos/{owner}/{repo}/readme"),
+            _request_with_retry(client, f"/repos/{owner}/{repo}/contents"),
             return_exceptions=True,
         )
 
@@ -76,15 +106,22 @@ async def fetch_repo_data(owner: str, repo: str, *, token: str) -> RepoData:
 
 async def collect_repo_data(entries: list[CapabilityEntry], *, token: str) -> list[RepoData]:
     sem = asyncio.Semaphore(5)
+    total = len(entries)
+    progress = {"done": 0}
 
     async def _fetch_one(entry: CapabilityEntry) -> RepoData:
         async with sem:
             if not entry.repo_url:
-                return RepoData()
-            parsed = _parse_owner_repo(entry.repo_url)
-            if not parsed:
-                return RepoData()
-            return await fetch_repo_data(parsed[0], parsed[1], token=token)
+                result = RepoData()
+            else:
+                parsed = _parse_owner_repo(entry.repo_url)
+                if not parsed:
+                    result = RepoData()
+                else:
+                    result = await fetch_repo_data(parsed[0], parsed[1], token=token)
+            progress["done"] += 1
+            print(f"  [{progress['done']}/{total}] 采集 {entry.name}")
+            return result
 
     results = await asyncio.gather(*[_fetch_one(e) for e in entries], return_exceptions=True)
     return [r if isinstance(r, RepoData) else RepoData() for r in results]

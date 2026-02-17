@@ -31,14 +31,16 @@ _SYSTEM_PROMPT = """你是一个 AI Agent 能力评估专家。分析给定的 A
    - 0-2: 几乎无文档
 
 同时提供：
-- summary: 2-3 句话总结
-- one_liner: 一句话描述（最多 80 字符）
+- summary: 2-3 句话总结（必须使用中文）
+- one_liner: 一句话描述（最多 80 字符，必须使用中文）
 - install_guide: 安装步骤（Markdown）
 - usage_guide: 使用示例（Markdown）
 - safety_notes: 安全分析说明
 - category_suggestion: 分类建议（development / data / web / productivity / ai / media / trading / communication）
 
-以 JSON 格式返回。"""
+重要：summary 和 one_liner 字段必须使用中文撰写，其他字段可以使用英文。
+
+以纯 JSON 格式返回，不要包裹在代码块中。JSON 字段值中不要使用 markdown 代码块（```），改用纯文本描述安装和使用步骤。"""
 
 
 class AIAnalyzer(ABC):
@@ -53,11 +55,17 @@ class AIAnalyzer(ABC):
 
     def parse_response(self, raw: str) -> AnalysisResult:
         try:
-            if "```json" in raw:
-                raw = raw.split("```json")[1].split("```")[0]
-            elif "```" in raw:
-                raw = raw.split("```")[1].split("```")[0]
-            data = json.loads(raw.strip())
+            # 先尝试直接解析（response_format=json_object 时无代码块包裹）
+            try:
+                data = json.loads(raw.strip())
+            except json.JSONDecodeError:
+                # 兜底：用正则找最外层 JSON 对象
+                import re
+                match = re.search(r'\{[\s\S]*\}', raw)
+                if match:
+                    data = json.loads(match.group())
+                else:
+                    return AnalysisResult()
             return AnalysisResult(
                 reliability_score=float(data.get("reliability_score", 0)),
                 safety_score=float(data.get("safety_score", 0)),
@@ -84,6 +92,7 @@ class OpenAIAnalyzer(AIAnalyzer):
         truncated = readme[:8000]
         resp = await self.client.chat.completions.create(
             model=self.model, max_tokens=1500,
+            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": self.get_system_prompt()},
                 {"role": "user", "content": f"能力名称: {name}\n描述: {description}\n\nREADME:\n{truncated}"},

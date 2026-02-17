@@ -87,23 +87,85 @@ def insert_capabilities(items: list[dict]):
     conn.close()
 
 
-def search_capabilities(q: str = "", category: str = "", limit: int = 20) -> list[dict]:
+def search_capabilities(
+    q: str = "",
+    category: str = "",
+    limit: int = 20,
+    sort_by: str = "overall_score",
+    order: str = "desc",
+    page: int = 1,
+    per_page: int | None = None,
+) -> dict:
+    """搜索能力，支持排序、分页、模糊搜索。
+
+    返回 {"items": [...], "total": N}
+    """
     conn = _get_conn()
     conditions = []
-    params = []
+    params: list = []
     if q:
-        conditions.append("(name LIKE ? OR description LIKE ?)")
-        params.extend([f"%{q}%", f"%{q}%"])
+        conditions.append("(name LIKE ? OR description LIKE ? OR provider LIKE ?)")
+        params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
     if category:
         conditions.append("category = ?")
         params.append(category)
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    # 计算总数
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM capabilities {where}", params
+    ).fetchone()[0]
+
+    # 排序（白名单防注入）
+    allowed_sort = {"overall_score", "stars", "last_updated", "name", "created_at"}
+    if sort_by not in allowed_sort:
+        sort_by = "overall_score"
+    order_dir = "ASC" if order.lower() == "asc" else "DESC"
+
+    # 分页
+    if per_page is not None:
+        actual_limit = per_page
+        offset = (max(page, 1) - 1) * per_page
+    else:
+        actual_limit = limit
+        offset = 0
+
     rows = conn.execute(
-        f"SELECT * FROM capabilities {where} ORDER BY overall_score DESC LIMIT ?",
-        params + [limit]
+        f"SELECT * FROM capabilities {where} ORDER BY {sort_by} {order_dir} LIMIT ? OFFSET ?",
+        params + [actual_limit, offset]
     ).fetchall()
     conn.close()
-    return [_row_to_dict(r) for r in rows]
+    return {"items": [_row_to_dict(r) for r in rows], "total": total}
+
+
+def get_stats() -> dict:
+    """返回统计信息：总数、各分类数量、平均分、最高分能力。"""
+    conn = _get_conn()
+    total = conn.execute("SELECT COUNT(*) FROM capabilities").fetchone()[0]
+
+    # 各分类数量
+    cat_rows = conn.execute(
+        "SELECT category, COUNT(*) as cnt FROM capabilities WHERE category != '' GROUP BY category ORDER BY cnt DESC"
+    ).fetchall()
+    categories = {r["category"]: r["cnt"] for r in cat_rows}
+
+    # 平均分
+    avg_row = conn.execute("SELECT AVG(overall_score) as avg_score FROM capabilities").fetchone()
+    avg_score = round(avg_row["avg_score"] or 0, 2)
+
+    # 最高分能力
+    top_row = conn.execute(
+        "SELECT * FROM capabilities ORDER BY overall_score DESC LIMIT 1"
+    ).fetchone()
+    top_capability = _row_to_dict(top_row) if top_row else None
+
+    conn.close()
+    return {
+        "total": total,
+        "categories": categories,
+        "avg_score": avg_score,
+        "top_capability": top_capability,
+    }
 
 
 def get_capability(slug: str) -> dict | None:

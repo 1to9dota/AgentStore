@@ -80,7 +80,10 @@ def _score_reputation(data: CapabilityData) -> float:
 
 
 def _score_usability(data: CapabilityData) -> float:
-    """易用性 = AI 评估 (75%) + 文档长度 (25%)"""
+    """易用性 = AI 评估 (75%) + 文档长度 (25%)
+    README 太短（< 100 字符）直接判 0 分，文档质量不达标"""
+    if data.repo.readme_length < 100:
+        return 0.0
     ai_part = data.analysis.usability_score * 0.75
     doc_score = min(2.5, data.repo.readme_length / 3000 * 2.5)
     return _clamp(ai_part + doc_score)
