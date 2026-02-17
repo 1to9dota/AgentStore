@@ -14,9 +14,13 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return params.then(({ slug }) => {
     const label = CATEGORIES[slug] || slug;
+    const caps = getCapabilitiesByCategory(slug);
     return {
-      title: `${label} - AgentStore`,
-      description: `Browse AI agent capabilities in the ${label} category`,
+      title: `${label} 分类 - AgentStore`,
+      description: `浏览 ${label} 分类下的 ${caps.length} 个 MCP 插件，AI 驱动五维评分，助你选出最佳 Agent 能力。`,
+      alternates: {
+        canonical: `/category/${slug}`,
+      },
     };
   });
 }

@@ -14,7 +14,7 @@ export function generateStaticParams() {
   return getAllCapabilities().map((c) => ({ slug: c.slug.split("/") }));
 }
 
-// 动态 metadata
+// 动态 metadata：包含 OG 和 canonical
 export function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }) {
   return params.then(({ slug }) => {
     const fullSlug = slug.join("/");
@@ -23,6 +23,14 @@ export function generateMetadata({ params }: { params: Promise<{ slug: string[] 
     return {
       title: `${cap.name} - AgentStore`,
       description: cap.one_liner,
+      alternates: {
+        canonical: `/capability/${fullSlug}`,
+      },
+      openGraph: {
+        title: `${cap.name} - AgentStore`,
+        description: cap.one_liner,
+        type: "article",
+      },
     };
   });
 }
@@ -71,8 +79,38 @@ export default async function CapabilityDetailPage({
 
   const dimensions = Object.keys(SCORE_LABELS) as (keyof CapabilityScores)[];
 
+  // SoftwareApplication 结构化数据（JSON-LD）
+  const softwareJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: cap.name,
+    description: cap.description,
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Any",
+    ...(cap.repo_url && { url: cap.repo_url }),
+    ...(cap.language && { programmingLanguage: cap.language }),
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: cap.overall_score.toFixed(1),
+      bestRating: "10",
+      worstRating: "0",
+      ratingCount: cap.contributors || 1,
+    },
+    author: {
+      "@type": "Organization",
+      name: cap.provider,
+    },
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
+      {/* 结构化数据 */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareJsonLd),
+        }}
+      />
       {/* 面包屑 */}
       <nav className="mb-6 text-sm text-zinc-500">
         <Link href="/" className="hover:text-zinc-300 transition-colors">

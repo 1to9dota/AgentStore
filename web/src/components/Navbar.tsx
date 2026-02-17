@@ -77,6 +77,12 @@ export default function Navbar() {
           >
             首页
           </Link>
+          <Link
+            href="/stats"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+          >
+            数据面板
+          </Link>
           <a
             href="https://github.com"
             target="_blank"
@@ -132,6 +138,13 @@ export default function Navbar() {
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               首页
+            </Link>
+            <Link
+              href="/stats"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              数据面板
             </Link>
             <a
               href="https://github.com"
