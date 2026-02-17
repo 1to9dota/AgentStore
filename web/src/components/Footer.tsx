@@ -70,9 +70,23 @@ export default function Footer() {
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-400">
               关于
             </h3>
-            <p className="text-sm leading-relaxed text-zinc-500">
-              AgentStore 是一个 AI 驱动的 MCP 插件评级平台，帮助开发者发现、评估和比较最优质的 Agent 能力。
-            </p>
+            <ul className="space-y-2.5">
+              <li>
+                <Link href="/about" className="text-sm text-zinc-500 transition-colors hover:text-zinc-300">
+                  关于 AgentStore
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/1to9dota/AgentStore/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-zinc-500 transition-colors hover:text-zinc-300"
+                >
+                  联系我们
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>

@@ -10,6 +10,8 @@ __pycache__/
 
 # 数据库（运行时生成）
 *.db
+*.db-wal
+*.db-shm
 
 # Node.js
 node_modules/
@@ -17,6 +19,7 @@ node_modules/
 
 # 生成的数据文件（根目录 data/ 由 pipeline 生成，不提交）
 data/*.json
+data/cron.log
 # 但前端需要的数据文件需要提交（在 web/.gitignore 中不排除）
 
 # IDE

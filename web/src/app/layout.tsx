@@ -49,6 +49,11 @@ export const metadata: Metadata = {
     description:
       "发现、评估和比较 200+ MCP 插件，AI 驱动的五维评分系统",
   },
+  // PWA 支持
+  manifest: "/manifest.json",
+  themeColor: "#3b82f6",
+  icons: { icon: "/icon.svg" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent" },
   // 其他 SEO 相关
   keywords: [
     "MCP",

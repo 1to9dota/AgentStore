@@ -93,6 +93,12 @@ export default function Navbar() {
           >
             对比
           </Link>
+          <Link
+            href="/about"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+          >
+            关于
+          </Link>
           <a
             href="https://github.com"
             target="_blank"
@@ -168,6 +174,13 @@ export default function Navbar() {
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               对比
+            </Link>
+            <Link
+              href="/about"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              关于
             </Link>
             <a
               href="https://github.com"
