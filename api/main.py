@@ -1,6 +1,6 @@
 """AgentStore REST API"""
 import math
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .database import search_capabilities, get_capability, get_categories, get_stats, init_db
 
@@ -29,8 +29,8 @@ def api_search(
     category: str = "",
     sort: str = "overall_score",
     order: str = "desc",
-    page: int = 1,
-    per_page: int = 20,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=200),
 ):
     data = search_capabilities(
         q=q, category=category, sort_by=sort, order=order, page=page, per_page=per_page
@@ -67,7 +67,7 @@ def api_categories():
 
 
 @app.get("/api/v1/rankings")
-def api_rankings(category: str = "", sort: str = "overall_score", order: str = "desc", limit: int = 50):
+def api_rankings(category: str = "", sort: str = "overall_score", order: str = "desc", limit: int = Query(default=50, ge=1, le=200)):
     data = search_capabilities(category=category, sort_by=sort, order=order, limit=limit)
     return {"results": data["items"], "total": data["total"]}
 

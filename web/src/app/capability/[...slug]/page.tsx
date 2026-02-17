@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import {
   getAllCapabilities,
   getCapabilityBySlug,
@@ -143,9 +144,9 @@ export default async function CapabilityDetailPage({
             <h2 className="mb-3 text-lg font-semibold text-zinc-200">
               安装指南
             </h2>
-            <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-4 text-sm text-zinc-300">
-              {cap.install_guide}
-            </pre>
+            <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-zinc-950 prose-pre:rounded-lg prose-code:text-emerald-400">
+              <ReactMarkdown>{cap.install_guide}</ReactMarkdown>
+            </div>
           </div>
 
           {/* 使用方法 */}
@@ -153,9 +154,9 @@ export default async function CapabilityDetailPage({
             <h2 className="mb-3 text-lg font-semibold text-zinc-200">
               使用方法
             </h2>
-            <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-4 text-sm text-zinc-300">
-              {cap.usage_guide}
-            </pre>
+            <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-zinc-950 prose-pre:rounded-lg prose-code:text-emerald-400">
+              <ReactMarkdown>{cap.usage_guide}</ReactMarkdown>
+            </div>
           </div>
 
           {/* 安全注意事项 */}

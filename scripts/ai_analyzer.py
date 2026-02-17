@@ -124,8 +124,10 @@ class GeminiAnalyzer(AIAnalyzer):
         self.model = model
 
     async def analyze(self, name: str, readme: str, description: str) -> AnalysisResult:
+        import asyncio
         truncated = readme[:8000]
-        resp = self.client.models.generate_content(
+        resp = await asyncio.to_thread(
+            self.client.models.generate_content,
             model=self.model,
             contents=f"{self.get_system_prompt()}\n\n能力名称: {name}\n描述: {description}\n\nREADME:\n{truncated}",
         )

@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import re
+from urllib.parse import urlparse
 import httpx
 from .models import CapabilityEntry, RepoData
 
@@ -30,6 +31,11 @@ async def _request_with_retry(client: httpx.AsyncClient, url: str, **kwargs) -> 
                     print(f"    等待 {wait}s 后重试 ({attempt + 1}/{_MAX_RETRIES})...")
                     await asyncio.sleep(wait)
                     continue
+                else:
+                    raise httpx.HTTPStatusError(
+                        f"GitHub rate limit exceeded after {_MAX_RETRIES} retries",
+                        request=resp.request, response=resp
+                    )
             return resp
         except (httpx.TimeoutException, httpx.ConnectError) as e:
             if attempt < _MAX_RETRIES - 1:
@@ -45,9 +51,11 @@ async def _request_with_retry(client: httpx.AsyncClient, url: str, **kwargs) -> 
 def _parse_owner_repo(url: str) -> tuple[str, str] | None:
     if not url or "github.com" not in url:
         return None
-    parts = url.rstrip("/").split("/")
-    if len(parts) >= 2:
-        return parts[-2], parts[-1]
+    parsed = urlparse(url)
+    # 路径格式: /owner/repo 或 /owner/repo/tree/main 等
+    segments = [s for s in parsed.path.split("/") if s]
+    if len(segments) >= 2:
+        return segments[0], segments[1]
     return None
 
 

@@ -58,33 +58,38 @@ def init_db():
 
 def insert_capabilities(items: list[dict]):
     conn = _get_conn()
-    for item in items:
-        scores = item.get("scores", {})
-        conn.execute("""
-            INSERT OR REPLACE INTO capabilities
-            (slug, name, source, source_id, provider, description, category,
-             repo_url, endpoint, protocol, stars, forks, language, last_updated,
-             contributors, has_tests, has_typescript, readme_length,
-             reliability, safety, capability, reputation, usability, overall_score,
-             ai_summary, one_liner, install_guide, usage_guide, safety_notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            item["slug"], item["name"], item["source"], item["source_id"],
-            item["provider"], item.get("description", ""), item.get("category", ""),
-            item.get("repo_url"), item.get("endpoint"), item.get("protocol", "rest"),
-            item.get("stars", 0), item.get("forks", 0), item.get("language"),
-            item.get("last_updated"), item.get("contributors", 0),
-            item.get("has_tests", False), item.get("has_typescript", False),
-            item.get("readme_length", 0),
-            scores.get("reliability", 0), scores.get("safety", 0),
-            scores.get("capability", 0), scores.get("reputation", 0),
-            scores.get("usability", 0), item.get("overall_score", 0),
-            item.get("ai_summary", ""), item.get("one_liner", ""),
-            item.get("install_guide", ""), item.get("usage_guide", ""),
-            item.get("safety_notes", ""),
-        ))
-    conn.commit()
-    conn.close()
+    try:
+        for item in items:
+            scores = item.get("scores", {})
+            conn.execute("""
+                INSERT OR REPLACE INTO capabilities
+                (slug, name, source, source_id, provider, description, category,
+                 repo_url, endpoint, protocol, stars, forks, language, last_updated,
+                 contributors, has_tests, has_typescript, readme_length,
+                 reliability, safety, capability, reputation, usability, overall_score,
+                 ai_summary, one_liner, install_guide, usage_guide, safety_notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                item["slug"], item["name"], item["source"], item["source_id"],
+                item["provider"], item.get("description", ""), item.get("category", ""),
+                item.get("repo_url"), item.get("endpoint"), item.get("protocol", "rest"),
+                item.get("stars", 0), item.get("forks", 0), item.get("language"),
+                item.get("last_updated"), item.get("contributors", 0),
+                item.get("has_tests", False), item.get("has_typescript", False),
+                item.get("readme_length", 0),
+                scores.get("reliability", 0), scores.get("safety", 0),
+                scores.get("capability", 0), scores.get("reputation", 0),
+                scores.get("usability", 0), item.get("overall_score", 0),
+                item.get("ai_summary", ""), item.get("one_liner", ""),
+                item.get("install_guide", ""), item.get("usage_guide", ""),
+                item.get("safety_notes", ""),
+            ))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def search_capabilities(
