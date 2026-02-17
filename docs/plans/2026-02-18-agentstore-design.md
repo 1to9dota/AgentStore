@@ -209,3 +209,88 @@ class AIAnalyzer:
 - [ ] 雷达图组件
 - [ ] i18n 双语框架
 - [ ] SSG 数据加载逻辑
+
+## 10. 产品路线图
+
+### MVP（当前） — Subagent 并行开发
+
+> 目标：验证"agent 是否真的需要查询和评估其他 agent 的能力"
+
+- 采集 OpenClaw + MCP 生态数据
+- 5 维 AI 评分引擎
+- REST API（查询、评级、注册）
+- Next.js 前端（雷达图、排行榜）
+- 预计代码量：~2000 行
+- 开发方式：Subagent 并行
+
+---
+
+### V1: 实时能力验证 — Agent Teams 首次使用
+
+> 目标：从"静态评分"升级为"动态验证"，让评分基于真实测试而非 AI 猜测
+
+**4 个 Agent Teammate 并行：**
+
+| Teammate | 职责 | 预计代码量 |
+|----------|------|-----------|
+| **安全扫描 Agent** | 自动审计代码：权限分析、依赖漏洞扫描、API key 泄露检测 | ~3000 行 |
+| **Sandbox 测试 Agent** | 隔离环境中实际运行 agent 能力，记录成功率/响应时间/错误 | ~3000 行 |
+| **实时监控 Agent** | 定期心跳检测已注册能力是否在线，健康状态仪表盘 | ~1500 行 |
+| **API 扩展 Agent** | WebSocket 推送、批量查询、高级搜索（语义搜索） | ~1500 行 |
+
+**关键技术决策：**
+- Sandbox 用 Docker 隔离运行
+- 安全扫描集成 Semgrep / Snyk
+- 监控数据存 TimescaleDB 或 InfluxDB
+- 评分从"AI 猜测"升级为"AI 分析 + 实测数据加权"
+
+---
+
+### V2: AgentStore Protocol + SDK — Agent Teams 常态化
+
+> 目标：定义 Agent 能力描述标准，让任何生态的 agent 都能注册和发现
+
+**核心交付物：**
+- **AgentStore Protocol Spec**：能力描述的标准格式（类似 OpenAPI，但面向 agent 能力）
+- **Python SDK**：`pip install agentstore` → agent 代码里 3 行注册能力
+- **JavaScript SDK**：`npm install agentstore` → 同上
+- **Rust SDK**：性能敏感场景
+- **OpenClaw 原生插件**：OpenClaw agent 内置 AgentStore 查询
+- **实时通信**：WebSocket 订阅"某类能力上线"事件
+- **A2A 桥接**：兼容 Google A2A 协议，让 AgentStore 成为 A2A 的发现层
+
+**Agent Teams 编排：**
+- Protocol 设计 team（1-2 agent）
+- SDK 开发 team（3 agent，Python/JS/Rust 并行）
+- 集成测试 team（1 agent）
+- 文档 team（1 agent）
+
+---
+
+### V3: 信用体系 + 经济层 — 全面 Agent Teams
+
+> 目标：让 AgentStore 成为 Agent 经济体的基础设施
+
+**核心交付物：**
+- **调用审计**：每次通过 AgentStore 发现的调用都留痕
+- **信用积分**：基于历史表现的动态信用分（类似芝麻信用）
+- **SLA 保证**：能力提供者可声明 SLA，AgentStore 自动验证
+- **API 计费系统**：免费额度 + 按量付费 + 企业套餐
+- **Agent 身份验证**：去中心化身份（DID）或中心化 API key
+- **争议仲裁**：当能力表现不符预期时的仲裁机制
+
+**可选：链上扩展（V3.5）**
+- 评分记录上链（不可篡改）
+- 信用积分 token 化
+- 能力交易的链上结算
+
+---
+
+### 里程碑时间线
+
+| 阶段 | 目标时间 | 开发方式 | 验证标准 |
+|------|---------|---------|---------|
+| MVP | 2026 年 2 月底 | Subagent | 有 agent 实际通过 API 查询能力 |
+| V1 | 2026 年 3-4 月 | Agent Teams | 实时评分准确率 > 80% |
+| V2 | 2026 年 Q2 | Agent Teams | SDK 被 10+ 项目集成 |
+| V3 | 2026 年 Q3-Q4 | Agent Teams | 月活 agent 查询量 > 10万 |
