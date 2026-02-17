@@ -195,14 +195,28 @@ class SecretScanner(Scanner):
         (r"sk-[a-zA-Z0-9]{20,}", "OpenAI API Key"),
         (r"ghp_[a-zA-Z0-9]{36}", "GitHub Personal Access Token"),
         (r"AKIA[A-Z0-9]{16}", "AWS Access Key ID"),
-        (r"""(api[_\-]?key|secret|token|password)\s*[=:]\s*['"][^'"]{8,}['"]""", "通用密钥/密码"),
+        (r"AIza[a-zA-Z0-9_-]{35}", "Google API Key"),
+        (r"xox[bpas]-[a-zA-Z0-9-]{10,}", "Slack Token"),
     ]
 
+    # 假值/占位符 — 匹配到这些说明不是真正泄露
+    DUMMY_VALUES = re.compile(
+        r"(test|fake|dummy|example|placeholder|xxx|your[_-]|changeme|replace|TODO|"
+        r"sk-xxx|sk-your|sk-test|INSERT|REPLACE_ME|<[^>]+>|\$\{|process\.env|os\.getenv|"
+        r"\.{3,}|0{8,}|1{8,}|a{8,}|x{8,})",
+        re.IGNORECASE,
+    )
+
     # 需要跳过的目录和文件
-    SKIP_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv", "dist", "build"}
+    SKIP_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv", "dist", "build",
+                 "tests", "test", "__tests__", "spec", "__test__", "fixtures", "mocks",
+                 "testdata", "test_data", "examples", "example", "docs"}
+    SKIP_FILES = {"example.env", ".env.example", ".env.sample", ".env.template",
+                  "config.example.js", "config.sample.js"}
     SKIP_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf",
                        ".eot", ".svg", ".mp3", ".mp4", ".zip", ".tar", ".gz", ".bin",
-                       ".exe", ".dll", ".so", ".dylib", ".pyc", ".pyo"}
+                       ".exe", ".dll", ".so", ".dylib", ".pyc", ".pyo",
+                       ".bmp", ".tif", ".tiff", ".webp", ".pdf", ".lock"}
 
     async def scan(self, repo_path: str) -> ScanResult:
         findings = []
@@ -214,6 +228,12 @@ class SecretScanner(Scanner):
             for fname in files:
                 if Path(fname).suffix.lower() in self.SKIP_EXTENSIONS:
                     continue
+                if fname.lower() in self.SKIP_FILES:
+                    continue
+                # 跳过测试文件名
+                if re.search(r"(test_|_test\.|\.test\.|\.spec\.|mock|fixture)", fname, re.IGNORECASE):
+                    continue
+
                 fpath = os.path.join(root, fname)
 
                 # 跳过大文件（>1MB）
@@ -230,9 +250,13 @@ class SecretScanner(Scanner):
 
                 rel_path = os.path.relpath(fpath, repo_path)
                 for pattern, label in self.SECRET_PATTERNS:
-                    matches = re.findall(pattern, content, re.IGNORECASE)
-                    if matches:
-                        findings.append(f"[{label}] {rel_path}: {len(matches)} 处匹配")
+                    for match in re.finditer(pattern, content):
+                        matched_text = match.group()
+                        # 过滤假值/占位符
+                        if self.DUMMY_VALUES.search(matched_text):
+                            continue
+                        findings.append(f"[{label}] {rel_path}")
+                        break  # 每个文件每种模式只报一次
 
         has_keys = len(findings) > 0
         detail_text = "\n".join(findings[:20]) if findings else "未检测到 API Key 泄露"

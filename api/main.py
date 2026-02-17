@@ -72,6 +72,28 @@ def api_rankings(category: str = "", sort: str = "overall_score", order: str = "
     return {"results": data["items"], "total": data["total"]}
 
 
+@app.get("/api/v1/semantic-search")
+def api_semantic_search(q: str, limit: int = Query(default=10, ge=1, le=50)):
+    """语义搜索 -- 用 embedding 理解查询意图"""
+    import os
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+
+    from scripts.embeddings import search_similar
+    results = search_similar(q, api_key, top_k=limit)
+
+    # 查数据库获取完整信息
+    capabilities = []
+    for slug, score in results:
+        cap = get_capability(slug)
+        if cap:
+            cap["similarity"] = round(score, 4)
+            capabilities.append(cap)
+
+    return {"results": capabilities, "total": len(capabilities), "query": q}
+
+
 @app.get("/api/v1/stats")
 def api_stats():
     return get_stats()
