@@ -31,6 +31,7 @@ export async function fetchWithAuth(
 
 /**
  * 切换收藏状态（收藏/取消收藏）
+ * 后端返回 {action: "favorited" | "unfavorited", slug}
  */
 export async function toggleFavorite(
   slug: string
@@ -45,11 +46,13 @@ export async function toggleFavorite(
     throw new Error(err.detail || "操作失败");
   }
 
-  return res.json();
+  const data = await res.json();
+  return { favorited: data.action === "favorited" };
 }
 
 /**
  * 获取当前用户的收藏列表
+ * 后端返回 {favorites: [{slug, created_at}], total}，提取 slug 列表
  */
 export async function getFavorites(): Promise<string[]> {
   const res = await fetchWithAuth(`${API_URL}/api/v1/favorites`);
@@ -58,7 +61,8 @@ export async function getFavorites(): Promise<string[]> {
     throw new Error("获取收藏列表失败");
   }
 
-  return res.json();
+  const data = await res.json();
+  return (data.favorites || []).map((f: { slug: string }) => f.slug);
 }
 
 // ========== 评论相关 ==========
@@ -97,6 +101,7 @@ export async function postComment(
 
 /**
  * 获取某个 capability 的评论列表
+ * 后端返回 {comments: [...], total, avg_rating}，提取 comments 数组
  */
 export async function getComments(slug: string): Promise<Comment[]> {
   const res = await fetch(
@@ -107,5 +112,6 @@ export async function getComments(slug: string): Promise<Comment[]> {
     throw new Error("获取评论失败");
   }
 
-  return res.json();
+  const data = await res.json();
+  return data.comments || [];
 }
