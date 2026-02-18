@@ -155,7 +155,7 @@ export default function CapabilityDetailClient({ cap, allCapabilities, fullSlug 
             </h2>
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
               <div className="w-48 sm:w-auto shrink-0">
-                <RadarChart scores={cap.scores} size={260} />
+                <RadarChart scores={cap.scores} size={260} scoreLabels={isZh ? SCORE_LABELS : SCORE_LABELS_EN} />
               </div>
               <div className="flex-1 w-full space-y-3">
                 {dimensions.map((dim) => (

@@ -3,6 +3,7 @@ import { CapabilityScores, SCORE_LABELS } from "@/lib/types";
 interface RadarChartProps {
   scores: CapabilityScores;
   size?: number;
+  scoreLabels?: Record<string, string>;
 }
 
 const DIMENSIONS: (keyof CapabilityScores)[] = [
@@ -37,7 +38,7 @@ function makePolygonPoints(
     .join(" ");
 }
 
-export default function RadarChart({ scores, size = 300 }: RadarChartProps) {
+export default function RadarChart({ scores, size = 300, scoreLabels = SCORE_LABELS }: RadarChartProps) {
   const cx = size / 2;
   const cy = size / 2;
   const maxRadius = size * 0.38; // 留出标签空间
@@ -114,7 +115,7 @@ export default function RadarChart({ scores, size = 300 }: RadarChartProps) {
             className="fill-zinc-400"
             fontSize={11}
           >
-            {SCORE_LABELS[dim]}
+            {scoreLabels[dim]}
           </text>
         );
       })}
