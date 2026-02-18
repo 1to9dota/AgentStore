@@ -2,6 +2,19 @@
 
 所有重要变更记录在此文件中。
 
+## [1.1.1] - 2026-02-18
+
+### 修复
+- PC 端登录/注册弹窗被 Navbar 遮挡：改用 JS `window.innerWidth` + inline style 定位，彻底绕过 Tailwind v4 响应式兼容问题
+- 后端首次生产部署：FastAPI 上线 Render（https://agentstore-api.onrender.com），用户系统、评论、收藏在生产环境全面可用
+
+### 新增
+- `/health` 接口：Render 健康检查端点
+- `render.yaml`：一键 Render 部署配置（Docker + 免费套餐）
+- `NEXT_PUBLIC_API_URL` 已在 Vercel 配置并重新构建，前后端正式联通
+
+---
+
 ## [1.1.0] - 2026-02-18
 
 ### 新增（Sprint 11 — 体验打磨）
