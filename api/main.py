@@ -84,6 +84,11 @@ app.include_router(users_router)
 logger = logging.getLogger("agentstore.usage")
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 def _resolve_api_key(raw_key: str) -> dict | None:
     """通过 SHA-256 hash 直接查询验证 API Key，O(1) 复杂度"""
     if not raw_key or not raw_key.startswith("ask_"):

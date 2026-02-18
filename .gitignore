@@ -8,10 +8,11 @@ __pycache__/
 # 环境变量（包含 API key，绝对不能提交）
 .env
 
-# 数据库（运行时生成）
+# 数据库（WAL 临时文件不提交，主 DB 需提交用于 Render 部署）
 *.db
 *.db-wal
 *.db-shm
+!data/agentstore.db
 
 # Node.js
 node_modules/
