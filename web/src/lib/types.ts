@@ -55,3 +55,11 @@ export const SCORE_LABELS: Record<keyof CapabilityScores, string> = {
   reputation: "社区口碑",
   usability: "易用性",
 };
+
+export const SCORE_LABELS_EN: Record<keyof CapabilityScores, string> = {
+  reliability: "Reliability",
+  safety: "Safety",
+  capability: "Capability",
+  reputation: "Reputation",
+  usability: "Usability",
+};
