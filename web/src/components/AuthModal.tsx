@@ -13,6 +13,11 @@ interface AuthModalProps {
 /**
  * 登录/注册弹窗组件
  * 支持登录和注册两个 Tab 切换
+ *
+ * 定位策略：
+ * - 移动端（< 768px）：贴底部 bottom sheet
+ * - 桌面端（>= 768px）：inline style 固定在 Navbar 下方水平居中
+ *   （放弃 Tailwind md: 响应式，直接用 JS 判断避免 v4 兼容问题）
  */
 export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
   const [tab, setTab] = useState<"login" | "register">("login");
@@ -20,10 +25,16 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Portal 挂载节点（SSR 安全：仅客户端使用）
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   if (!open || !mounted) return null;
 
@@ -31,14 +42,12 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
       if (tab === "login") {
         await login(username, password);
       } else {
         await register(username, password);
       }
-      // 成功后重置表单并关闭弹窗
       setUsername("");
       setPassword("");
       onSuccess();
@@ -50,6 +59,26 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
     }
   };
 
+  // 桌面端：绝对定位在 Navbar 下方 80px，水平居中
+  const cardStyle: React.CSSProperties = isDesktop
+    ? {
+        position: "absolute",
+        top: "72px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: "448px",
+        bottom: "auto",
+        right: "auto",
+      }
+    : {
+        // 移动端：贴底部
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+      };
+
   return createPortal(
     <div className="fixed inset-0 z-[100]">
       {/* 遮罩层 */}
@@ -58,17 +87,20 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
         onClick={onClose}
       />
 
-      {/* 弹窗内容：
-          移动端 → absolute 贴底部
-          桌面端 → absolute top-[60px] 水平居中，完全不依赖 flex 居中 */}
-      <div className="absolute bottom-0 left-0 right-0 z-10
-                      md:bottom-auto md:top-[60px] md:left-1/2 md:-translate-x-1/2
-                      md:w-full md:max-w-md
-                      rounded-t-2xl md:rounded-2xl border border-zinc-700 bg-zinc-900 p-6 pb-8 shadow-2xl">
-        {/* 移动端拖拽条指示器 */}
-        <div className="mb-4 flex justify-center md:hidden">
-          <div className="h-1 w-10 rounded-full bg-zinc-600" />
-        </div>
+      {/* 弹窗卡片 */}
+      <div
+        className="z-10 border border-zinc-700 bg-zinc-900 p-6 pb-8 shadow-2xl"
+        style={{
+          ...cardStyle,
+          borderRadius: isDesktop ? "1rem" : "1rem 1rem 0 0",
+        }}
+      >
+        {/* 移动端拖拽条 */}
+        {!isDesktop && (
+          <div className="mb-4 flex justify-center">
+            <div className="h-1 w-10 rounded-full bg-zinc-600" />
+          </div>
+        )}
 
         {/* 关闭按钮 */}
         <button
@@ -132,7 +164,6 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
             />
           </div>
 
-          {/* 错误提示 */}
           {error && (
             <div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
               {error}
