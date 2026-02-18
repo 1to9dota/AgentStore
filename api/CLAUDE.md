@@ -7,9 +7,9 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #8210 | 9:21 AM | 🟣 | AgentStore Full User Authentication and Community API Implemented | ~582 |
+| #8021 | 8:46 AM | 🟣 | AgentStore Database Schema Extended with Safe Column Migration Helper | ~356 |
+| #8018 | " | 🟣 | API Usage Logging and Request Tracking Added to AgentStore | ~297 |
 | #7914 | 6:30 AM | 🟣 | Users API Extended to Support Plugin Submission Feature | ~241 |
-| #7753 | 6:09 AM | 🟣 | Full User Authentication System Implemented in AgentStore API | ~451 |
 | #7695 | 6:01 AM | 🔴 | CORS Policy Tightened from Wildcard to Specific Origins | ~299 |
-| #7160 | 4:23 AM | 🟣 | AgentStore FastAPI Backend Implemented with 5 REST Endpoints | ~391 |
-| #6985 | 3:34 AM | 🟣 | AgentStore FastAPI REST API Created | ~423 |
 </claude-mem-context>

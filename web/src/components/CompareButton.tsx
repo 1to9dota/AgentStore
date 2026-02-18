@@ -32,7 +32,7 @@ export default function CompareButton({ slug, className }: CompareButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className={`inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:border-blue-500/50 hover:bg-zinc-800 hover:text-blue-400 ${className || ""}`}
+      className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-zinc-300 transition-colors hover:border-blue-500/50 hover:bg-zinc-800 hover:text-blue-400 ${className || ""}`}
     >
       {/* 对比图标 */}
       <svg

@@ -73,12 +73,12 @@ export default function CapabilityCard({ capability, highlightQuery }: Capabilit
   return (
     <Link
       href={`/capability/${slug}`}
-      className="card-hover group block rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 transition-all hover:border-zinc-700 hover:bg-zinc-900"
+      className="card-hover group block rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 transition-all hover:border-zinc-700 hover:bg-zinc-900 active:scale-[0.98]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-lg font-semibold text-zinc-100 group-hover:text-blue-400 transition-colors">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="truncate text-lg font-semibold text-zinc-100 group-hover:text-blue-400 transition-colors min-w-0">
               <HighlightText text={name} query={highlightQuery} />
             </h3>
             {/* 来源标签 */}

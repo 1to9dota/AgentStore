@@ -3,7 +3,7 @@ import Link from "next/link";
 // 底部组件 — 三列布局 + 版权行
 export default function Footer() {
   return (
-    <footer className="border-t border-zinc-800 bg-zinc-950">
+    <footer className="border-t border-zinc-800 bg-zinc-950 pb-16 md:pb-0">
       {/* 三列链接区 */}
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">

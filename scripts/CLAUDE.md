@@ -7,6 +7,5 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #7786 | 6:13 AM | 🔵 | AgentStore Tencent Cloud Deployment Script Uses rsync + Docker Compose | ~307 |
 | #7423 | 5:24 AM | 🟣 | Semantic Search via OpenAI Embeddings Added to AgentStore | ~402 |
 </claude-mem-context>

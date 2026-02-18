@@ -59,9 +59,7 @@ export default function RadarChart({ scores, size = 300 }: RadarChartProps) {
   return (
     <svg
       viewBox={`0 0 ${size} ${size}`}
-      width={size}
-      height={size}
-      className="drop-shadow-lg"
+      className="w-[240px] h-[240px] md:w-[300px] md:h-[300px] drop-shadow-lg"
     >
       {/* 背景网格 */}
       {gridLevels.map((level) => (
@@ -113,8 +111,8 @@ export default function RadarChart({ scores, size = 300 }: RadarChartProps) {
             y={y}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-zinc-400 text-xs"
-            fontSize={12}
+            className="fill-zinc-400"
+            fontSize={11}
           >
             {SCORE_LABELS[dim]}
           </text>

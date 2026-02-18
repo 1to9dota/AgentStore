@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/i18n";
@@ -10,8 +10,33 @@ import UserMenu from "./UserMenu";
 export default function Navbar() {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileSearchRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { t } = useLocale();
+
+  // 移动端搜索框展开时自动聚焦
+  useEffect(() => {
+    if (mobileSearchOpen && mobileSearchRef.current) {
+      mobileSearchRef.current.focus();
+    }
+  }, [mobileSearchOpen]);
+
+  // ESC 键关闭移动端搜索
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape") {
+        setMobileSearchOpen(false);
+        setQuery("");
+        return;
+      }
+      if (e.key === "Enter") {
+        handleSearch();
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [query]
+  );
 
   const handleSearch = () => {
     const q = query.trim();
@@ -19,6 +44,7 @@ export default function Navbar() {
       router.push(`/search?q=${encodeURIComponent(q)}`);
       setQuery("");
       setMenuOpen(false);
+      setMobileSearchOpen(false);
     }
   };
 
@@ -115,12 +141,25 @@ export default function Navbar() {
           <UserMenu />
         </div>
 
-        {/* 移动端：汉堡菜单按钮 */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200 md:hidden"
-          aria-label="菜单"
-        >
+        {/* 移动端：搜索 + 汉堡菜单 */}
+        <div className="flex items-center gap-1 md:hidden">
+          {/* 移动端搜索图标按钮 */}
+          <button
+            onClick={() => setMobileSearchOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            aria-label="搜索"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </button>
+
+          {/* 汉堡菜单按钮 */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            aria-label="菜单"
+          >
           {menuOpen ? (
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -130,7 +169,35 @@ export default function Navbar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           )}
-        </button>
+          </button>
+        </div>
+
+        {/* 移动端搜索 overlay — 全屏展开 */}
+        {mobileSearchOpen && (
+          <div className="absolute inset-0 z-50 flex items-center gap-2 bg-black/95 px-4 backdrop-blur-md md:hidden">
+            <svg className="h-5 w-5 shrink-0 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              ref={mobileSearchRef}
+              type="text"
+              placeholder={t.home.search_placeholder}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="min-h-[44px] flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none"
+            />
+            <button
+              onClick={() => {
+                setMobileSearchOpen(false);
+                setQuery("");
+              }}
+              className="min-h-[44px] shrink-0 px-2 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              取消
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* 移动端展开菜单 */}

@@ -4,6 +4,7 @@ import ClientProviders from "@/components/ClientProviders";
 import Navbar from "@/components/Navbar";
 import ScrollToTop from "@/components/ScrollToTop";
 import Footer from "@/components/Footer";
+import MobileNav from "@/components/MobileNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -124,7 +125,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-black text-zinc-100 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-black pb-16 text-zinc-100 antialiased md:pb-0`}
       >
         <ClientProviders>
           {/* 导航栏 */}
@@ -138,6 +139,9 @@ export default function RootLayout({
 
           {/* 回到顶部按钮 */}
           <ScrollToTop />
+
+          {/* 移动端底部导航栏 */}
+          <MobileNav />
         </ClientProviders>
       </body>
     </html>

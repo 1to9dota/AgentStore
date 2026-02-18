@@ -7,27 +7,5 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #7920 | 6:30 AM | 🔵 | Frontend lib/ Directory Contains Auth and API Client Modules | ~251 |
-| #7915 | " | 🔵 | AgentStore Frontend Type System Fully Documented | ~370 |
-| #7902 | " | 🟣 | AgentStore Frontend API Client Built with Auth, Favorites, and Comments | ~461 |
-| #7898 | " | 🔵 | AgentStore Frontend Environment Variables and Admin Panel Revealed | ~369 |
-| #7896 | " | 🔴 | auth.ts Register Flow Fixed: Now Directly Uses Token from Register Response | ~234 |
-| #7803 | 6:14 AM | 🔵 | AgentStore Frontend API Client Module Exists with Auth, Favorites, and Comments | ~420 |
-| #7739 | 6:09 AM | 🔵 | AgentStore TypeScript Type Definitions and Category/Score Label Constants | ~372 |
-| #7708 | 6:04 AM | 🔴 | Security Hardening Committed and Pushed: JWT, Auth, SQLite, Rate Limiting Fixes | ~448 |
-| #7702 | 6:03 AM | 🔴 | Auth Registration Flow Fixed to Use Token from Register Response Directly | ~353 |
-| #7699 | " | 🔵 | AgentStore Frontend Has Auth Module with JWT Token Management | ~372 |
-| #7696 | 6:01 AM | 🔴 | Favorites/Comments API Alignment Fixed and CORS Hardened | ~389 |
-| #7689 | " | 🟣 | AgentStore Frontend API Client with Auth, Favorites, and Comments Implemented | ~441 |
-| #7597 | 5:43 AM | 🟣 | AgentStore Sprint 6 Committed — User UI, Plugin Compare, i18n, and UX Polish | ~515 |
-| #7595 | " | 🟣 | AgentStore Frontend Expanded with 11 New Components and Auth Infrastructure | ~384 |
-| #7594 | " | 🟣 | AgentStore User Authentication System and Social UI Completed | ~556 |
-| #7530 | 5:40 AM | 🟣 | AgentStore Frontend API Client with Auth, Favorites, and Comments | ~367 |
-| #7525 | " | 🟣 | AgentStore Frontend Auth Module Implemented with JWT localStorage Pattern | ~359 |
-| #7472 | 5:34 AM | 🔵 | AgentStore Frontend Data Layer: File-Based JSON with In-Memory Cache | ~310 |
-| #7441 | 5:30 AM | ✅ | AgentStore Unstaged Changes: API, Scanner, and CLAUDE.md Docs Updated | ~271 |
-| #7436 | 5:29 AM | 🔵 | AgentStore Has Embeddings Module and CLAUDE.md Files in Progress | ~308 |
-| #7039 | 3:38 AM | 🔵 | AgentStore Web Frontend Data Layer: File-Based JSON with In-Memory Cache | ~393 |
-| #7025 | 3:37 AM | 🟣 | AgentStore Next.js Frontend Scaffold Committed to Git | ~370 |
-| #7002 | 3:36 AM | 🟣 | AgentStore Frontend TypeScript Types and Constants Defined | ~317 |
+| #8033 | 8:47 AM | 🟣 | Comment Interface Extended with likes_count Field | ~283 |
 </claude-mem-context>

@@ -58,7 +58,7 @@ export default function FavoriteButton({ slug }: FavoriteButtonProps) {
         onClick={handleClick}
         disabled={loading}
         title={favorited ? "取消收藏" : "收藏"}
-        className={`group rounded-lg p-2 transition-all ${
+        className={`group flex h-11 w-11 items-center justify-center rounded-lg transition-all ${
           favorited
             ? "text-red-500 hover:text-red-400"
             : "text-zinc-500 hover:text-red-400"
