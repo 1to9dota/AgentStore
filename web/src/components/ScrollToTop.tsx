@@ -22,7 +22,7 @@ export default function ScrollToTop() {
   return (
     <button
       onClick={scrollToTop}
-      aria-label="回到顶部"
+      aria-label="Back to top"
       className={`fixed bottom-20 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full md:bottom-6 border border-zinc-700 bg-zinc-900/90 text-zinc-300 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-zinc-600 hover:bg-zinc-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
         visible
           ? "translate-y-0 opacity-100"

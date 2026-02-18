@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { isLoggedIn } from "@/lib/auth";
 import { toggleFavorite, getFavorites } from "@/lib/api";
 import AuthModal from "./AuthModal";
+import { useLocale } from "@/i18n";
 
 interface FavoriteButtonProps {
   slug: string;
@@ -15,6 +16,7 @@ interface FavoriteButtonProps {
  * 未登录时弹出登录弹窗
  */
 export default function FavoriteButton({ slug }: FavoriteButtonProps) {
+  const { t } = useLocale();
   const [favorited, setFavorited] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -57,7 +59,7 @@ export default function FavoriteButton({ slug }: FavoriteButtonProps) {
       <button
         onClick={handleClick}
         disabled={loading}
-        title={favorited ? "取消收藏" : "收藏"}
+        title={favorited ? t.favorites_page.unfavorite : t.user.my_favorites}
         className={`group flex h-11 w-11 items-center justify-center rounded-lg transition-all ${
           favorited
             ? "text-red-500 hover:text-red-400"

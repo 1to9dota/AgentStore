@@ -5,6 +5,7 @@ import Link from "next/link";
 import { isLoggedIn } from "@/lib/auth";
 import { getComments, postComment, toggleCommentLike, Comment } from "@/lib/api";
 import AuthModal from "./AuthModal";
+import { useLocale } from "@/i18n";
 
 interface CommentSectionProps {
   slug: string;
@@ -56,6 +57,7 @@ function StarRating({
  * 显示评论列表 + 评论输入框
  */
 export default function CommentSection({ slug }: CommentSectionProps) {
+  const { t, locale } = useLocale();
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
   const [rating, setRating] = useState(5);
@@ -99,10 +101,9 @@ export default function CommentSection({ slug }: CommentSectionProps) {
       await postComment(slug, content.trim(), rating);
       setContent("");
       setRating(5);
-      // 刷新评论列表
       await loadComments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "评论失败");
+      setError(err instanceof Error ? err.message : t.comment.failed);
     } finally {
       setSubmitting(false);
     }
@@ -111,7 +112,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
   // 格式化时间
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("zh-CN", {
+    return date.toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -123,7 +124,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
       <h2 className="mb-6 text-lg font-semibold text-zinc-200">
-        用户评价 ({comments.length})
+        {t.comment.title} ({comments.length})
       </h2>
 
       {/* 评论输入区 */}
@@ -131,13 +132,13 @@ export default function CommentSection({ slug }: CommentSectionProps) {
         {isLoggedIn() ? (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="text-sm text-zinc-400">评分：</span>
+              <span className="text-sm text-zinc-400">{t.comment.rating}</span>
               <StarRating value={rating} onChange={setRating} />
             </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="写下你的使用体验..."
+              placeholder={t.comment.placeholder}
               rows={4}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
             />
@@ -150,7 +151,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
                 disabled={submitting || !content.trim()}
                 className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting ? "提交中..." : "发表评论"}
+                {submitting ? t.comment.submitting : t.comment.submit}
               </button>
             </div>
           </div>
@@ -160,17 +161,17 @@ export default function CommentSection({ slug }: CommentSectionProps) {
             onClick={() => setShowAuth(true)}
             className="w-full rounded-lg border border-dashed border-zinc-700 py-4 text-sm text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-300"
           >
-            登录后发表评论
+            {t.comment.login_prompt}
           </button>
         )}
       </form>
 
       {/* 评论列表 */}
       {loading ? (
-        <div className="py-8 text-center text-sm text-zinc-500">加载中...</div>
+        <div className="py-8 text-center text-sm text-zinc-500">{t.comment.loading}</div>
       ) : comments.length === 0 ? (
         <div className="py-8 text-center text-sm text-zinc-500">
-          暂无评论，来写第一条吧
+          {t.comment.empty}
         </div>
       ) : (
         <div className="space-y-5">
@@ -214,7 +215,6 @@ export default function CommentSection({ slug }: CommentSectionProps) {
                     }
                     try {
                       const result = await toggleCommentLike(comment.id);
-                      // 更新本地评论的点赞数
                       setComments((prev) =>
                         prev.map((c) =>
                           c.id === comment.id

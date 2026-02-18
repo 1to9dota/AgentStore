@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getUser, isLoggedIn, logout } from "@/lib/auth";
 import AuthModal from "./AuthModal";
+import { useLocale } from "@/i18n";
 
 /**
  * 用户菜单组件
@@ -20,6 +21,7 @@ export default function UserMenu() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { t } = useLocale();
 
   // 刷新登录状态（供登录/登出后调用）
   const refreshAuth = () => {
@@ -58,7 +60,7 @@ export default function UserMenu() {
           onClick={() => setShowAuth(true)}
           className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
         >
-          登录
+          {t.user.login}
         </button>
         <AuthModal
           open={showAuth}
@@ -107,7 +109,7 @@ export default function UserMenu() {
             <svg className="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            我的主页
+            {t.user.my_profile}
           </button>
           <button
             onClick={() => {
@@ -119,7 +121,7 @@ export default function UserMenu() {
             <svg className="h-4 w-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
             </svg>
-            我的收藏
+            {t.user.my_favorites}
           </button>
           <div className="mx-3 my-1 border-t border-zinc-800" />
           <button
@@ -129,7 +131,7 @@ export default function UserMenu() {
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            退出登录
+            {t.user.logout}
           </button>
         </div>
       )}

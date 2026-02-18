@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/i18n";
+
 // 全局错误边界 — 友好的错误页面 + 重试按钮
 export default function Error({
   error,
@@ -8,6 +10,8 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6 text-center">
       {/* 错误图标 */}
@@ -28,10 +32,8 @@ export default function Error({
       </div>
 
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-zinc-100">出了点问题</h1>
-        <p className="text-sm text-zinc-400">
-          页面加载时发生了意外错误，请稍后重试。
-        </p>
+        <h1 className="text-2xl font-bold text-zinc-100">{t.pages.error_title}</h1>
+        <p className="text-sm text-zinc-400">{t.pages.error_desc}</p>
         {/* 开发环境显示错误详情 */}
         {process.env.NODE_ENV === "development" && error.message && (
           <p className="mx-auto mt-2 max-w-md rounded-lg bg-zinc-900 p-3 font-mono text-xs text-red-400/80">
@@ -44,7 +46,7 @@ export default function Error({
         onClick={reset}
         className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
       >
-        重试
+        {t.pages.retry}
       </button>
     </div>
   );

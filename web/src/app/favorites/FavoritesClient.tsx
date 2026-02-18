@@ -7,6 +7,7 @@ import { getFavorites, toggleFavorite } from "@/lib/api";
 import { Capability } from "@/lib/types";
 import CapabilityCard from "@/components/CapabilityCard";
 import AuthModal from "@/components/AuthModal";
+import { useLocale } from "@/i18n";
 
 interface FavoritesClientProps {
   allCapabilities: Capability[];
@@ -18,6 +19,7 @@ interface FavoritesClientProps {
  * - 已登录：展示收藏的插件卡片，支持取消收藏
  */
 export default function FavoritesClient({ allCapabilities }: FavoritesClientProps) {
+  const { t } = useLocale();
   const [loggedIn, setLoggedIn] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [favSlugs, setFavSlugs] = useState<string[]>([]);
@@ -58,7 +60,6 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
     setRemovingSlug(slug);
     try {
       await toggleFavorite(slug);
-      // 从列表中移除
       setFavSlugs((prev) => prev.filter((s) => s !== slug));
     } catch (err) {
       console.error("取消收藏失败:", err);
@@ -77,7 +78,6 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
     return (
       <div className="mx-auto max-w-4xl px-6 py-20">
         <div className="flex flex-col items-center text-center">
-          {/* 心形图标 */}
           <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-zinc-800/50">
             <svg
               className="h-10 w-10 text-zinc-600"
@@ -93,15 +93,13 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
               />
             </svg>
           </div>
-          <h1 className="mb-3 text-2xl font-bold text-zinc-100">我的收藏</h1>
-          <p className="mb-8 text-zinc-400">
-            登录后即可收藏喜欢的插件，方便随时查看
-          </p>
+          <h1 className="mb-3 text-2xl font-bold text-zinc-100">{t.favorites_page.title}</h1>
+          <p className="mb-8 text-zinc-400">{t.favorites_page.login_prompt}</p>
           <button
             onClick={() => setShowAuth(true)}
             className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
           >
-            登录 / 注册
+            {t.favorites_page.login_button}
           </button>
           <AuthModal
             open={showAuth}
@@ -120,7 +118,7 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-10">
-        <h1 className="mb-8 text-2xl font-bold text-zinc-100">我的收藏</h1>
+        <h1 className="mb-8 text-2xl font-bold text-zinc-100">{t.favorites_page.title}</h1>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div
@@ -157,15 +155,13 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
               />
             </svg>
           </div>
-          <h1 className="mb-3 text-2xl font-bold text-zinc-100">还没有收藏</h1>
-          <p className="mb-8 text-zinc-400">
-            去发现插件吧，收藏你感兴趣的 Agent 能力
-          </p>
+          <h1 className="mb-3 text-2xl font-bold text-zinc-100">{t.favorites_page.empty_title}</h1>
+          <p className="mb-8 text-zinc-400">{t.favorites_page.empty_hint}</p>
           <Link
             href="/"
             className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
           >
-            浏览插件
+            {t.favorites_page.browse}
           </Link>
         </div>
       </div>
@@ -177,7 +173,7 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
     <div className="mx-auto max-w-6xl px-6 py-10">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-zinc-100">
-          我的收藏
+          {t.favorites_page.title}
           <span className="ml-2 text-base font-normal text-zinc-500">
             ({favoriteCapabilities.length})
           </span>
@@ -196,11 +192,10 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
                 handleUnfavorite(cap.slug);
               }}
               disabled={removingSlug === cap.slug}
-              title="取消收藏"
+              title={t.favorites_page.unfavorite}
               className="absolute right-3 top-3 z-10 rounded-lg bg-zinc-900/80 p-1.5 text-red-500 opacity-0 backdrop-blur transition-all hover:bg-zinc-800 hover:text-red-400 group-hover/fav:opacity-100 disabled:opacity-50"
             >
               {removingSlug === cap.slug ? (
-                // 加载中旋转动画
                 <svg
                   className="h-5 w-5 animate-spin"
                   fill="none"
@@ -221,7 +216,6 @@ export default function FavoritesClient({ allCapabilities }: FavoritesClientProp
                   />
                 </svg>
               ) : (
-                // 实心心形图标
                 <svg
                   className="h-5 w-5"
                   fill="currentColor"

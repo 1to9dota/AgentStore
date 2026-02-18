@@ -6,18 +6,13 @@ import Link from "next/link";
 import CapabilityCard from "@/components/CapabilityCard";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Capability, CATEGORIES } from "@/lib/types";
+import { useLocale } from "@/i18n";
 
 /** 每次"加载更多"显示的条数 */
 const PAGE_SIZE = 20;
 
 /** 排序选项 */
 type SortKey = "score" | "stars" | "updated";
-
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "score", label: "Top Rated" },
-  { key: "stars", label: "Most Stars" },
-  { key: "updated", label: "Recently Updated" },
-];
 
 /** 热门搜索标签（高频分类 + 关键词） */
 const HOT_TAGS = [
@@ -44,6 +39,14 @@ function SearchResultsInner({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t, locale } = useLocale();
+  const isZh = locale === "zh";
+
+  const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+    { key: "score", label: isZh ? "评分最高" : "Top Rated" },
+    { key: "stars", label: isZh ? "Stars 最多" : "Most Stars" },
+    { key: "updated", label: isZh ? "最近更新" : "Recently Updated" },
+  ];
 
   // URL 中的初始查询词
   const urlQuery = searchParams.get("q") || "";
@@ -172,13 +175,13 @@ function SearchResultsInner({
       {/* 面包屑 */}
       <nav className="mb-6 text-sm text-zinc-500">
         <Link href="/" className="hover:text-zinc-300 transition-colors">
-          首页
+          {t.nav.home}
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-zinc-300">搜索</span>
+        <span className="text-zinc-300">{t.nav.search}</span>
       </nav>
 
-      <h1 className="mb-4 text-3xl font-bold text-zinc-100">搜索结果</h1>
+      <h1 className="mb-4 text-3xl font-bold text-zinc-100">{t.search_page.title}</h1>
 
       {/* 实时搜索输入框 */}
       <div className="relative mb-2">
@@ -192,7 +195,7 @@ function SearchResultsInner({
             // 延迟关闭，让点击事件先触发
             setTimeout(() => setIsFocused(false), 200);
           }}
-          placeholder="输入关键词搜索 Agent 能力..."
+          placeholder={t.home.search_placeholder}
           className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 px-5 py-3 pr-12 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           autoFocus
         />
@@ -207,7 +210,7 @@ function SearchResultsInner({
       {/* 热门搜索标签 */}
       {showHotTags && (
         <div className="mb-4 flex flex-wrap gap-2">
-          <span className="text-xs text-zinc-500 self-center mr-1">热门搜索:</span>
+          <span className="text-xs text-zinc-500 self-center mr-1">{t.search_page.hot_tags}</span>
           {HOT_TAGS.map((tag) => (
             <button
               key={tag}
@@ -225,7 +228,7 @@ function SearchResultsInner({
         <div className="mb-6 space-y-3">
           {/* 排序选项 */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500 shrink-0">排序:</span>
+            <span className="text-xs text-zinc-500 shrink-0">{t.search_page.sort}</span>
             {SORT_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
@@ -247,7 +250,7 @@ function SearchResultsInner({
           {/* 分类筛选 chips */}
           {resultCategories.length > 1 && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-zinc-500 shrink-0">分类:</span>
+              <span className="text-xs text-zinc-500 shrink-0">{t.search_page.category}</span>
               <button
                 onClick={() => {
                   setActiveCategory(null);
@@ -259,7 +262,7 @@ function SearchResultsInner({
                     : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300"
                 }`}
               >
-                全部 ({filteredResults.length})
+                {t.search_page.all} ({filteredResults.length})
               </button>
               {resultCategories.map(([cat, count]) => (
                 <button
@@ -285,15 +288,17 @@ function SearchResultsInner({
       {/* 结果统计 */}
       {debouncedQuery.trim() ? (
         <p className="mb-8 text-zinc-500">
-          关键词 &quot;{debouncedQuery}&quot; 共找到 {results.length} 个结果
-          {hasMore && (
-            <span className="ml-2 text-zinc-600">
-              （当前显示 {visibleResults.length} 条）
-            </span>
-          )}
+          {isZh
+            ? <>关键词 &quot;{debouncedQuery}&quot; 共找到 {results.length} 个结果
+                {hasMore && <span className="ml-2 text-zinc-600">（当前显示 {visibleResults.length} 条）</span>}
+              </>
+            : <>{results.length} result{results.length !== 1 ? "s" : ""} for &quot;{debouncedQuery}&quot;
+                {hasMore && <span className="ml-2 text-zinc-600">(showing {visibleResults.length})</span>}
+              </>
+          }
         </p>
       ) : (
-        !showHotTags && <p className="mb-8 text-zinc-500">请输入搜索关键词</p>
+        !showHotTags && <p className="mb-8 text-zinc-500">{t.search_page.enter_keyword}</p>
       )}
 
       {/* 搜索结果列表 */}
@@ -313,12 +318,15 @@ function SearchResultsInner({
             />
           </svg>
           <p className="text-lg text-zinc-400 mb-2">
-            没有找到与 &quot;{debouncedQuery}&quot; 匹配的 Agent 能力
+            {isZh
+              ? <>没有找到与 &quot;{debouncedQuery}&quot; 匹配的 MCP 插件</>
+              : <>No results for &quot;{debouncedQuery}&quot;</>
+            }
           </p>
           <p className="text-sm text-zinc-600">
-            试试其他关键词，或者
+            {t.search_page.try_another}
             <Link href="/" className="text-blue-400 hover:text-blue-300 ml-1">
-              回到首页浏览
+              {t.search_page.back_home}
             </Link>
           </p>
         </div>
@@ -341,7 +349,10 @@ function SearchResultsInner({
                 onClick={handleLoadMore}
                 className="rounded-lg border border-zinc-700 bg-zinc-800 px-6 py-2.5 text-sm text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-700 hover:text-zinc-100"
               >
-                加载更多（还有 {results.length - visibleCount} 条）
+                {isZh
+                  ? `${t.search_page.load_more}（还有 ${results.length - visibleCount} 条）`
+                  : `${t.search_page.load_more} (${results.length - visibleCount} more)`
+                }
               </button>
             </div>
           )}

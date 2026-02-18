@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Capability, CATEGORIES } from "@/lib/types";
 import ScoreBadge from "./ScoreBadge";
+import { useLocale } from "@/i18n";
 
 interface SimilarPluginsProps {
   current: Capability;
@@ -8,13 +11,15 @@ interface SimilarPluginsProps {
 }
 
 /**
- * 相似插件推荐 — Server Component
+ * 相似插件推荐
  * 算法：同分类 + 评分相近的 Top 5，排除当前插件
  */
 export default function SimilarPlugins({
   current,
   allCapabilities,
 }: SimilarPluginsProps) {
+  const { t } = useLocale();
+
   const similar = allCapabilities
     .filter((c) => c.slug !== current.slug && c.category === current.category)
     .map((c) => ({
@@ -29,7 +34,7 @@ export default function SimilarPlugins({
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
       <h2 className="mb-4 text-lg font-semibold text-zinc-200">
-        相似插件
+        {t.similar.title}
       </h2>
       <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scroll-smooth touch-pan-x [-webkit-overflow-scrolling:touch]">
         {similar.map((cap) => (

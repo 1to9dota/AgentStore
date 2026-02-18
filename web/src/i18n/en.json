@@ -1,38 +1,16 @@
 {
-  "nav": { "home": "Home", "search": "Search", "stats": "Dashboard", "compare": "Compare" },
-  "home": {
-    "title": "AgentStore",
-    "subtitle": "The MCP Plugin Registry & Trust System",
-    "search_placeholder": "Search MCP plugins...",
-    "top_rankings": "Top Rated",
-    "categories": "Categories",
-    "view_all": "View All"
-  },
-  "detail": {
-    "scores": "Five-Dimension Scores",
-    "ai_analysis": "AI Analysis",
-    "install": "Installation Guide",
-    "usage": "Usage",
-    "safety": "Safety Tips",
-    "safe": "Safety Notes",
-    "project_info": "Project Info",
-    "provider": "Provider",
-    "protocol": "Protocol",
-    "language": "Language",
-    "contributors": "Contributors",
-    "tests": "Tests",
-    "typescript": "TypeScript",
-    "updated": "Last Updated",
-    "view_source": "View Source",
-    "yes": "Yes",
-    "no": "No"
-  },
-  "stats": {
-    "title": "AgentStore Ecosystem Dashboard",
-    "total": "Total Plugins",
-    "avg_score": "Avg Score",
-    "categories": "Categories",
-    "test_coverage": "Test Coverage"
-  },
-  "common": { "score": "Score", "stars": "Stars", "forks": "Forks" }
+  "nav": { "home": "Home", "search": "Search", "stats": "Dashboard", "compare": "Compare", "about": "About", "cancel": "Cancel", "menu": "Menu" },
+  "home": { "title": "AgentStore", "subtitle": "The MCP Plugin Registry & Trust System", "search_placeholder": "Search MCP plugins...", "top_rankings": "Top Rated", "categories": "Categories", "view_all": "View All" },
+  "detail": { "scores": "Five-Dimension Scores", "ai_analysis": "AI Analysis", "install": "Installation Guide", "usage": "Usage Guide", "safety": "Safety Warning", "safe": "Safety Notes", "project_info": "Project Info", "provider": "Provider", "protocol": "Protocol", "language": "Language", "contributors": "Contributors", "tests": "Tests", "typescript": "TypeScript", "updated": "Updated", "view_source": "View Source", "yes": "Yes", "no": "No" },
+  "stats": { "title": "AgentStore Ecosystem Dashboard", "total": "Total Plugins", "avg_score": "Avg Score", "categories": "Categories", "test_coverage": "Test Coverage" },
+  "common": { "score": "Score", "stars": "Stars", "forks": "Forks" },
+  "user": { "login": "Log In", "my_profile": "My Profile", "my_favorites": "Favorites", "logout": "Sign Out" },
+  "search_page": { "title": "Search Results", "hot_tags": "Popular:", "sort": "Sort:", "category": "Category:", "all": "All", "enter_keyword": "Enter a keyword to search", "load_more": "Load More", "try_another": "Try another keyword, or", "back_home": "browse the homepage" },
+  "compare_page": { "title": "Plugin Comparison", "subtitle": "Compare up to 4 plugins side by side", "search_placeholder": "Search plugins to add...", "max_reached": "Max 4 plugins reached", "radar_title": "Five-Dimension Score Comparison", "attr": "Attribute", "total_score": "Total Score", "category": "Category", "source": "Source", "language": "Language", "tests": "Tests", "updated": "Last Updated", "empty_hint": "Search and add plugins above to compare", "empty_hint2": "Or click \"Add to Compare\" on any plugin page", "add_to_compare": "Add to Compare", "max_alert": "Maximum 4 plugins for comparison", "yes": "Yes", "no": "No" },
+  "favorites_page": { "title": "My Favorites", "login_prompt": "Log in to save your favorite plugins", "login_button": "Log In / Sign Up", "empty_title": "No favorites yet", "empty_hint": "Discover plugins and save the ones you like", "browse": "Browse Plugins", "unfavorite": "Remove from favorites" },
+  "trending": { "most_popular": "Most Popular", "recently_updated": "Recently Updated" },
+  "similar": { "title": "Similar Plugins" },
+  "pages": { "not_found_title": "Page Not Found", "not_found_desc": "The page you're looking for doesn't exist or has been removed. Head back to explore MCP plugins.", "back_home": "Back to Home", "search_plugins": "Search Plugins", "error_title": "Something Went Wrong", "error_desc": "An unexpected error occurred. Please try again.", "retry": "Try Again" },
+  "auth": { "login": "Log In", "register": "Sign Up", "username": "Username", "password": "Password", "username_placeholder": "Enter your username", "password_placeholder": "Password (min 6 characters)", "submitting": "Processing...", "operation_failed": "Operation failed" },
+  "comment": { "title": "User Reviews", "rating": "Rating:", "placeholder": "Share your experience...", "submit": "Post Review", "submitting": "Submitting...", "login_prompt": "Log in to post a review", "loading": "Loading...", "empty": "No reviews yet. Be the first!", "failed": "Failed to post review" }
 }

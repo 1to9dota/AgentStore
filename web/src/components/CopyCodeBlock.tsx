@@ -28,8 +28,8 @@ export default function CopyCodeBlock({
       const btn = document.createElement("button");
       btn.className =
         "absolute top-2 right-2 rounded-md bg-zinc-700/80 px-2 py-1 text-xs text-zinc-300 opacity-0 transition-opacity hover:bg-zinc-600 hover:text-zinc-100";
-      btn.textContent = "复制";
-      btn.setAttribute("aria-label", "复制代码");
+      btn.textContent = "Copy";
+      btn.setAttribute("aria-label", "Copy code");
 
       // hover 显示
       const showBtn = () => { btn.style.opacity = "1"; };
@@ -42,14 +42,14 @@ export default function CopyCodeBlock({
         const code = pre.querySelector("code")?.textContent || pre.textContent || "";
         try {
           await navigator.clipboard.writeText(code);
-          btn.textContent = "已复制!";
+          btn.textContent = "Copied!";
           setTimeout(() => {
-            btn.textContent = "复制";
+            btn.textContent = "Copy";
           }, 2000);
         } catch {
-          btn.textContent = "失败";
+          btn.textContent = "Failed";
           setTimeout(() => {
-            btn.textContent = "复制";
+            btn.textContent = "Copy";
           }, 2000);
         }
       };

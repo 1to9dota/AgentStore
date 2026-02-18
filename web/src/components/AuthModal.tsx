@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { login, register } from "@/lib/auth";
+import { useLocale } from "@/i18n";
 
 interface AuthModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface AuthModalProps {
  *   （放弃 Tailwind md: 响应式，直接用 JS 判断避免 v4 兼容问题）
  */
 export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
+  const { t } = useLocale();
   const [tab, setTab] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +55,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "操作失败");
+      setError(err instanceof Error ? err.message : t.auth.operation_failed);
     } finally {
       setLoading(false);
     }
@@ -122,7 +124,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
                 : "text-zinc-400 hover:text-zinc-300"
             }`}
           >
-            登录
+            {t.auth.login}
           </button>
           <button
             onClick={() => { setTab("register"); setError(""); }}
@@ -132,14 +134,14 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
                 : "text-zinc-400 hover:text-zinc-300"
             }`}
           >
-            注册
+            {t.auth.register}
           </button>
         </div>
 
         {/* 表单 */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm text-zinc-400">用户名</label>
+            <label className="mb-1.5 block text-sm text-zinc-400">{t.auth.username}</label>
             <input
               type="text"
               value={username}
@@ -147,12 +149,12 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
               required
               minLength={2}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="请输入用户名"
+              placeholder={t.auth.username_placeholder}
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm text-zinc-400">密码</label>
+            <label className="mb-1.5 block text-sm text-zinc-400">{t.auth.password}</label>
             <input
               type="password"
               value={password}
@@ -160,7 +162,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
               required
               minLength={6}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              placeholder="请输入密码（至少 6 位）"
+              placeholder={t.auth.password_placeholder}
             />
           </div>
 
@@ -175,7 +177,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
             disabled={loading}
             className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "处理中..." : tab === "login" ? "登录" : "注册"}
+            {loading ? t.auth.submitting : tab === "login" ? t.auth.login : t.auth.register}
           </button>
         </form>
       </div>

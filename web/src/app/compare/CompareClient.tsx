@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CapabilityScores, CATEGORIES, SCORE_LABELS } from "@/lib/types";
+import { CapabilityScores, CATEGORIES, SCORE_LABELS, SCORE_LABELS_EN } from "@/lib/types";
+import { useLocale } from "@/i18n";
 
 // 对比页所需的精简数据类型
 interface CompareCapability {
@@ -29,10 +30,10 @@ interface CompareClientProps {
 
 // 雷达图颜色方案（最多 4 个插件）
 const CHART_COLORS = [
-  { fill: "rgba(59,130,246,0.2)", stroke: "#3B82F6", dot: "#3B82F6" },   // 蓝色
-  { fill: "rgba(16,185,129,0.2)", stroke: "#10B981", dot: "#10B981" },   // 绿色
-  { fill: "rgba(245,158,11,0.2)", stroke: "#F59E0B", dot: "#F59E0B" },   // 橙色
-  { fill: "rgba(168,85,247,0.2)", stroke: "#A855F7", dot: "#A855F7" },   // 紫色
+  { fill: "rgba(59,130,246,0.2)", stroke: "#3B82F6", dot: "#3B82F6" },
+  { fill: "rgba(16,185,129,0.2)", stroke: "#10B981", dot: "#10B981" },
+  { fill: "rgba(245,158,11,0.2)", stroke: "#F59E0B", dot: "#F59E0B" },
+  { fill: "rgba(168,85,247,0.2)", stroke: "#A855F7", dot: "#A855F7" },
 ];
 
 const DIMENSIONS: (keyof CapabilityScores)[] = [
@@ -70,9 +71,11 @@ function makePolygonPoints(
 // 叠加雷达图组件
 function CompareRadarChart({
   items,
+  scoreLabels,
   size = 300,
 }: {
   items: CompareCapability[];
+  scoreLabels: Record<string, string>;
   size?: number;
 }) {
   const cx = size / 2;
@@ -151,7 +154,7 @@ function CompareRadarChart({
             className="fill-zinc-400"
             fontSize={12}
           >
-            {SCORE_LABELS[dim]}
+            {scoreLabels[dim]}
           </text>
         );
       })}
@@ -162,6 +165,9 @@ function CompareRadarChart({
 export default function CompareClient({ allCapabilities }: CompareClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t, locale } = useLocale();
+  const isZh = locale === "zh";
+  const scoreLabels = isZh ? SCORE_LABELS : SCORE_LABELS_EN;
 
   // 从 URL 参数解析已选 slugs
   const selectedSlugs = useMemo(() => {
@@ -225,25 +231,20 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  // 对比表格的行定义
   const scoreKeys = DIMENSIONS;
-
-
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
       {/* 页面标题 */}
-      <h1 className="text-3xl font-bold text-zinc-100 mb-2">插件对比</h1>
-      <p className="text-zinc-400 mb-8">
-        横向对比最多 4 个插件的评分、特性与数据
-      </p>
+      <h1 className="text-3xl font-bold text-zinc-100 mb-2">{t.compare_page.title}</h1>
+      <p className="text-zinc-400 mb-8">{t.compare_page.subtitle}</p>
 
       {/* 搜索添加区域 */}
       <div className="mb-8">
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <input
             type="text"
-            placeholder="搜索插件名称，添加到对比..."
+            placeholder={t.compare_page.search_placeholder}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -255,7 +256,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
           />
           {selectedSlugs.length >= 4 && (
             <span className="ml-3 text-sm text-zinc-500">
-              已达上限（最多 4 个）
+              {t.compare_page.max_reached}
             </span>
           )}
 
@@ -271,7 +272,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
                   <div className="min-w-0 flex-1">
                     <span className="text-zinc-100">{cap.name}</span>
                     <span className="ml-2 text-xs text-zinc-500">
-                      {cap.overall_score.toFixed(1)} 分
+                      {cap.overall_score.toFixed(1)}
                     </span>
                   </div>
                   <span className="shrink-0 text-xs text-zinc-500">
@@ -309,7 +310,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
                 <button
                   onClick={() => removeItem(item.slug)}
                   className="ml-1 opacity-60 transition-opacity hover:opacity-100"
-                  aria-label={`移除 ${item.name}`}
+                  aria-label={isZh ? `移除 ${item.name}` : `Remove ${item.name}`}
                 >
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -337,12 +338,8 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          <p className="mt-4 text-zinc-400">
-            在上方搜索并添加插件开始对比
-          </p>
-          <p className="mt-1 text-sm text-zinc-600">
-            也可以从插件详情页点击&ldquo;添加到对比&rdquo;按钮
-          </p>
+          <p className="mt-4 text-zinc-400">{t.compare_page.empty_hint}</p>
+          <p className="mt-1 text-sm text-zinc-600">{t.compare_page.empty_hint2}</p>
         </div>
       )}
 
@@ -352,10 +349,10 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
           {/* 叠加雷达图 */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
             <h2 className="mb-4 text-lg font-semibold text-zinc-200">
-              五维评分对比
+              {t.compare_page.radar_title}
             </h2>
             <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:justify-center">
-              <CompareRadarChart items={selectedItems} size={320} />
+              <CompareRadarChart items={selectedItems} scoreLabels={scoreLabels} size={320} />
               {/* 图例 */}
               <div className="flex flex-wrap gap-4 lg:flex-col lg:gap-2 lg:pt-8">
                 {selectedItems.map((item, idx) => (
@@ -380,7 +377,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
               <thead>
                 <tr className="border-b border-zinc-800">
                   <th className="sticky left-0 bg-zinc-900 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    属性
+                    {t.compare_page.attr}
                   </th>
                   {selectedItems.map((item, idx) => (
                     <th
@@ -400,12 +397,12 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
                 {/* 基本信息行 */}
-                <TableRow label="分类" values={selectedItems.map((c) => CATEGORIES[c.category] || c.category)} />
-                <TableRow label="来源" values={selectedItems.map((c) => c.source.toUpperCase())} />
+                <TableRow label={t.compare_page.category} values={selectedItems.map((c) => CATEGORIES[c.category] || c.category)} />
+                <TableRow label={t.compare_page.source} values={selectedItems.map((c) => c.source.toUpperCase())} />
 
                 {/* 总分行（高亮最高） */}
                 <ScoreRow
-                  label="总分"
+                  label={t.compare_page.total_score}
                   values={selectedItems.map((c) => c.overall_score)}
                 />
 
@@ -413,7 +410,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
                 {scoreKeys.map((key) => (
                   <ScoreRow
                     key={key}
-                    label={SCORE_LABELS[key]}
+                    label={scoreLabels[key]}
                     values={selectedItems.map((c) => c.scores[key])}
                   />
                 ))}
@@ -429,21 +426,21 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
                   values={selectedItems.map((c) => c.forks)}
                   format="int"
                 />
-                <TableRow label="语言" values={selectedItems.map((c) => c.language || "-")} />
+                <TableRow label={t.compare_page.language} values={selectedItems.map((c) => c.language || "-")} />
                 <TableRow
-                  label="测试"
-                  values={selectedItems.map((c) => c.has_tests ? "有" : "无")}
-                  highlight={(v) => v === "有"}
+                  label={t.compare_page.tests}
+                  values={selectedItems.map((c) => c.has_tests ? t.compare_page.yes : t.compare_page.no)}
+                  highlight={(v) => v === t.compare_page.yes}
                 />
                 <TableRow
                   label="TypeScript"
-                  values={selectedItems.map((c) => c.has_typescript ? "有" : "无")}
-                  highlight={(v) => v === "有"}
+                  values={selectedItems.map((c) => c.has_typescript ? t.compare_page.yes : t.compare_page.no)}
+                  highlight={(v) => v === t.compare_page.yes}
                 />
                 <TableRow
-                  label="更新时间"
+                  label={t.compare_page.updated}
                   values={selectedItems.map((c) =>
-                    new Date(c.last_updated).toLocaleDateString("zh-CN")
+                    new Date(c.last_updated).toLocaleDateString(isZh ? "zh-CN" : "en-US")
                   )}
                 />
               </tbody>
@@ -494,7 +491,6 @@ function ScoreRow({
   values: number[];
   format?: "score" | "int";
 }) {
-  // 找最大值
   const maxVal = Math.max(...values);
   const hasMultiple = values.length > 1;
 
