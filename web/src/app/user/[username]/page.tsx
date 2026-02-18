@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import ScoreBadge from "@/components/ScoreBadge";
 import type { UserProfile } from "@/lib/api";
+import { useLocale } from "@/i18n";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { locale } = useLocale();
+  const isZh = locale === "zh";
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -16,19 +19,20 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
     params.then((p) => {
       fetch(`${API_URL}/api/v1/users/${encodeURIComponent(p.username)}/profile`)
         .then((res) => {
-          if (!res.ok) throw new Error("用户不存在");
+          if (!res.ok) throw new Error(isZh ? "用户不存在" : "User not found");
           return res.json();
         })
         .then(setProfile)
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false));
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-20 text-center text-zinc-500">
-        加载中...
+        {isZh ? "加载中..." : "Loading..."}
       </div>
     );
   }
@@ -36,17 +40,29 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
   if (error || !profile) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-20 text-center">
-        <h1 className="text-2xl font-bold text-zinc-200 mb-2">用户不存在</h1>
-        <p className="text-zinc-500">{error || "找不到该用户"}</p>
+        <h1 className="text-2xl font-bold text-zinc-200 mb-2">
+          {isZh ? "用户不存在" : "User Not Found"}
+        </h1>
+        <p className="text-zinc-500">{error || (isZh ? "找不到该用户" : "This user does not exist.")}</p>
         <Link href="/" className="mt-4 inline-block text-blue-400 hover:underline">
-          返回首页
+          {isZh ? "返回首页" : "Back to Home"}
         </Link>
       </div>
     );
   }
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+    new Date(d).toLocaleDateString(isZh ? "zh-CN" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+
+  const stats = [
+    { label: isZh ? "收藏" : "Favorites", value: profile.stats.favorites, color: "text-pink-400" },
+    { label: isZh ? "评论" : "Reviews", value: profile.stats.comments, color: "text-blue-400" },
+    { label: isZh ? "提交" : "Submissions", value: profile.stats.submissions, color: "text-green-400" },
+  ];
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
@@ -57,17 +73,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
         </div>
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">{profile.username}</h1>
-          <p className="text-sm text-zinc-500">加入于 {formatDate(profile.created_at)}</p>
+          <p className="text-sm text-zinc-500">
+            {isZh ? `加入于 ${formatDate(profile.created_at)}` : `Joined ${formatDate(profile.created_at)}`}
+          </p>
         </div>
       </div>
 
       {/* 统计卡片 */}
       <div className="mb-10 grid grid-cols-3 gap-4">
-        {[
-          { label: "收藏", value: profile.stats.favorites, color: "text-pink-400" },
-          { label: "评论", value: profile.stats.comments, color: "text-blue-400" },
-          { label: "提交", value: profile.stats.submissions, color: "text-green-400" },
-        ].map((stat) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 sm:p-5 text-center">
             <div className={`text-2xl sm:text-3xl font-bold ${stat.color}`}>{stat.value}</div>
             <div className="mt-1 text-sm text-zinc-500">{stat.label}</div>
@@ -77,9 +91,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
       {/* 最近评论 */}
       <section className="mb-10">
-        <h2 className="mb-4 text-lg font-semibold text-zinc-200">最近评论</h2>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-200">
+          {isZh ? "最近评论" : "Recent Reviews"}
+        </h2>
         {profile.recent_comments.length === 0 ? (
-          <p className="text-sm text-zinc-600">暂无评论</p>
+          <p className="text-sm text-zinc-600">{isZh ? "暂无评论" : "No reviews yet."}</p>
         ) : (
           <div className="space-y-3">
             {profile.recent_comments.map((c, i) => (
@@ -102,9 +118,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
 
       {/* 最近收藏 */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-zinc-200">最近收藏</h2>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-200">
+          {isZh ? "最近收藏" : "Recent Favorites"}
+        </h2>
         {profile.recent_favorites.length === 0 ? (
-          <p className="text-sm text-zinc-600">暂无收藏</p>
+          <p className="text-sm text-zinc-600">{isZh ? "暂无收藏" : "No favorites yet."}</p>
         ) : (
           <div className="space-y-3">
             {profile.recent_favorites.map((f, i) => (

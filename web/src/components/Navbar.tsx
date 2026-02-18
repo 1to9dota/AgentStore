@@ -117,13 +117,13 @@ export default function Navbar() {
             href="/compare"
             className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
-            对比
+            {t.nav.compare}
           </Link>
           <Link
             href="/about"
             className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
-            关于
+            {t.nav.about}
           </Link>
           <a
             href="https://github.com/1to9dota/AgentStore"
@@ -147,7 +147,7 @@ export default function Navbar() {
           <button
             onClick={() => setMobileSearchOpen(true)}
             className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-            aria-label="搜索"
+            aria-label={t.nav.search}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -158,7 +158,7 @@ export default function Navbar() {
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-            aria-label="菜单"
+            aria-label={t.nav.menu}
           >
           {menuOpen ? (
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +194,7 @@ export default function Navbar() {
               }}
               className="min-h-[44px] shrink-0 px-2 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
-              取消
+              {t.nav.cancel}
             </button>
           </div>
         )}
@@ -240,14 +240,14 @@ export default function Navbar() {
               onClick={() => setMenuOpen(false)}
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
-              对比
+              {t.nav.compare}
             </Link>
             <Link
               href="/about"
               onClick={() => setMenuOpen(false)}
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
-              关于
+              {t.nav.about}
             </Link>
             <a
               href="https://github.com/1to9dota/AgentStore"

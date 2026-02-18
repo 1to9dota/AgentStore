@@ -4,14 +4,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import CapabilityCard from "@/components/CapabilityCard";
 import { Capability } from "@/lib/types";
+import { useLocale } from "@/i18n";
 
 type SortKey = "score" | "stars" | "updated";
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "score", label: "评分" },
-  { value: "stars", label: "Stars" },
-  { value: "updated", label: "更新时间" },
-];
 
 interface CategoryClientProps {
   capabilities: Capability[];
@@ -24,6 +19,15 @@ export default function CategoryClient({
   label,
   slug,
 }: CategoryClientProps) {
+  const { t, locale } = useLocale();
+  const isZh = locale === "zh";
+
+  const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+    { value: "score", label: isZh ? "评分" : "Score" },
+    { value: "stars", label: "Stars" },
+    { value: "updated", label: isZh ? "更新时间" : "Updated" },
+  ];
+
   const [sortBy, setSortBy] = useState<SortKey>("score");
 
   const sorted = useMemo(() => {
@@ -49,7 +53,7 @@ export default function CategoryClient({
       {/* 面包屑 */}
       <nav className="mb-6 text-sm text-zinc-500">
         <Link href="/" className="hover:text-zinc-300 transition-colors">
-          首页
+          {t.nav.home}
         </Link>
         <span className="mx-2">/</span>
         <span className="text-zinc-300">{label || slug}</span>
@@ -62,11 +66,16 @@ export default function CategoryClient({
             {label || slug}
           </h1>
           <p className="text-zinc-500">
-            共 {sorted.length} 个 Agent 能力
+            {isZh
+              ? `共 ${sorted.length} 个 Agent 能力`
+              : `${sorted.length} plugin${sorted.length !== 1 ? "s" : ""}`
+            }
           </p>
         </div>
         <div className="shrink-0">
-          <label className="mr-2 text-sm text-zinc-500">排序</label>
+          <label className="mr-2 text-sm text-zinc-500">
+            {isZh ? "排序" : "Sort"}
+          </label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortKey)}
@@ -82,7 +91,9 @@ export default function CategoryClient({
       </div>
 
       {sorted.length === 0 ? (
-        <p className="text-zinc-500">该分类下暂无数据</p>
+        <p className="text-zinc-500">
+          {isZh ? "该分类下暂无数据" : "No plugins in this category yet."}
+        </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((cap) => (
