@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, Field
+import re
+from pydantic import BaseModel, Field, field_validator
 
 from .database import _get_conn, get_usage_stats, TIER_LIMITS
 
@@ -64,12 +65,22 @@ class CommentOut(BaseModel):
     likes_count: int = 0
 
 
+_GITHUB_URL_RE = re.compile(r"^https://github\.com/[\w.\-]+/[\w.\-]+/?$")
+
+
 class SubmissionRequest(BaseModel):
     """插件提交请求"""
     name: str = Field(..., min_length=1, max_length=100)
     repo_url: str = Field(..., min_length=10, max_length=500)
     description: str = Field(..., min_length=10, max_length=2000)
     category: str = Field(..., min_length=1, max_length=50)
+
+    @field_validator("repo_url")
+    @classmethod
+    def validate_github_url(cls, v: str) -> str:
+        if not _GITHUB_URL_RE.match(v):
+            raise ValueError("仅支持 GitHub 仓库链接（https://github.com/owner/repo）")
+        return v
 
 
 class SubmissionOut(BaseModel):
@@ -288,6 +299,14 @@ def _check_admin(x_admin_password: str = Header(...)):
         raise HTTPException(status_code=403, detail="管理员密码错误")
 
 
+@router.post("/api/v1/admin/verify")
+def verify_admin(x_admin_password: str = Header(...)):
+    """验证管理员密码，返回验证结果（密码不暴露给前端）"""
+    if x_admin_password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="管理员密码错误")
+    return {"ok": True}
+
+
 # ── 插件提交路由 ──────────────────────────────────────────
 @router.post("/api/v1/submissions", response_model=SubmissionOut)
 def create_submission(req: SubmissionRequest, user: dict = Depends(_get_current_user)):
@@ -472,10 +491,11 @@ def create_api_key(req: CreateApiKeyRequest, user: dict = Depends(_get_current_u
         if count >= 5:
             raise HTTPException(status_code=400, detail="每个用户最多创建 5 个 API Key")
 
-        # 生成 key：ask_ 前缀 + 32 字符随机 hex
+        # 生成 key：ask_ 前缀 + 32 字符随机 hex，用 SHA-256 存储 hash
+        import hashlib
         raw_key = "ask_" + secrets.token_hex(16)
         key_prefix = raw_key[:8]
-        key_hash = pwd_context.hash(raw_key)
+        key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 
         cursor = conn.execute(
             """INSERT INTO api_keys (user_id, key_prefix, key_hash, name, tier, daily_limit)

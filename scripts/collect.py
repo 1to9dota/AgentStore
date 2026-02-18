@@ -177,7 +177,36 @@ async def fetch_repo_data(owner: str, repo: str, *, token: str) -> RepoData:
         return repo_data
 
 
+_REQUESTS_PER_REPO = 8  # 每个仓库最多 8 个 API 请求（6 个并行 + package.json + tags）
+_RATE_LIMIT_BUFFER = 100  # 保留 100 次额度作为缓冲
+
+
+async def _check_rate_limit(token: str) -> int:
+    """检查 GitHub API 剩余额度"""
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            "https://api.github.com/rate_limit",
+            headers={"Authorization": f"token {token}"},
+        )
+        if resp.status_code == 200:
+            remaining = resp.json().get("resources", {}).get("core", {}).get("remaining", 0)
+            limit = resp.json().get("resources", {}).get("core", {}).get("limit", 0)
+            print(f"  GitHub API 额度: {remaining}/{limit}")
+            return remaining
+    return 0
+
+
 async def collect_repo_data(entries: list[CapabilityEntry], *, token: str) -> list[RepoData]:
+    # 预算控制：检查额度是否足够
+    remaining = await _check_rate_limit(token)
+    max_repos = max(0, (remaining - _RATE_LIMIT_BUFFER) // _REQUESTS_PER_REPO)
+    if max_repos < len(entries):
+        print(f"  ⚠ 额度不足：可采集 {max_repos}/{len(entries)} 个仓库（剩余 {remaining} 次请求）")
+        entries = entries[:max_repos]
+        if max_repos == 0:
+            print("  ❌ 额度耗尽，跳过采集")
+            return [RepoData() for _ in range(len(entries))]
+
     sem = asyncio.Semaphore(5)
     total = len(entries)
     progress = {"done": 0}

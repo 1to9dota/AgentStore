@@ -3,16 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import ScoreBadge from "@/components/ScoreBadge";
+import type { UserProfile } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
-
-interface UserProfile {
-  username: string;
-  created_at: string;
-  stats: { favorites: number; comments: number; submissions: number };
-  recent_comments: { slug: string; content: string; rating: number; created_at: string }[];
-  recent_favorites: { slug: string; name: string; overall_score: number; created_at: string }[];
-}
 
 export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -56,7 +49,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
     new Date(d).toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12">
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
       {/* 用户头部 */}
       <div className="mb-8 flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-2xl font-bold text-white">
@@ -75,8 +68,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ username
           { label: "评论", value: profile.stats.comments, color: "text-blue-400" },
           { label: "提交", value: profile.stats.submissions, color: "text-green-400" },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-center">
-            <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+          <div key={stat.label} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 sm:p-5 text-center">
+            <div className={`text-2xl sm:text-3xl font-bold ${stat.color}`}>{stat.value}</div>
             <div className="mt-1 text-sm text-zinc-500">{stat.label}</div>
           </div>
         ))}

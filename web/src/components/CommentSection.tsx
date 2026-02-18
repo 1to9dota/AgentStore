@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { isLoggedIn, getUser } from "@/lib/auth";
+import { isLoggedIn } from "@/lib/auth";
 import { getComments, postComment, toggleCommentLike, Comment } from "@/lib/api";
 import AuthModal from "./AuthModal";
 
@@ -34,7 +34,7 @@ function StarRating({
           onClick={() => onChange?.(star)}
           onMouseEnter={() => !readonly && setHover(star)}
           onMouseLeave={() => !readonly && setHover(0)}
-          className={`${readonly ? "cursor-default" : "cursor-pointer"} transition-colors`}
+          className={`${readonly ? "cursor-default" : "cursor-pointer"} w-8 h-8 flex items-center justify-center transition-colors`}
         >
           <svg
             className={`h-5 w-5 ${
@@ -79,6 +79,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
 
   useEffect(() => {
     loadComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   // 提交评论
@@ -137,7 +138,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="写下你的使用体验..."
-              rows={3}
+              rows={4}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
             />
             {error && (
@@ -178,24 +179,24 @@ export default function CommentSection({ slug }: CommentSectionProps) {
               key={comment.id}
               className="border-t border-zinc-800 pt-5 first:border-t-0 first:pt-0"
             >
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
                   {/* 用户头像 */}
                   <Link
                     href={`/user/${encodeURIComponent(comment.username)}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-400 transition-colors hover:bg-zinc-700"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-400 transition-colors hover:bg-zinc-700"
                   >
                     {comment.username[0]?.toUpperCase() || "U"}
                   </Link>
                   <Link
                     href={`/user/${encodeURIComponent(comment.username)}`}
-                    className="text-sm font-medium text-zinc-300 transition-colors hover:text-blue-400"
+                    className="truncate text-sm font-medium text-zinc-300 transition-colors hover:text-blue-400"
                   >
                     {comment.username}
                   </Link>
                   <StarRating value={comment.rating} readonly />
                 </div>
-                <span className="text-xs text-zinc-600">
+                <span className="shrink-0 text-xs text-zinc-600">
                   {formatTime(comment.created_at)}
                 </span>
               </div>

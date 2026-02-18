@@ -11,14 +11,17 @@ import AuthModal from "./AuthModal";
  * 已登录：显示用户名 + 下拉菜单
  */
 export default function UserMenu() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [username, setUsername] = useState("");
+  const [loggedIn, setLoggedIn] = useState(() => isLoggedIn());
+  const [username, setUsername] = useState(() => {
+    const user = isLoggedIn() ? getUser() : null;
+    return user?.username || "";
+  });
   const [showAuth, setShowAuth] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // 初始化和刷新登录状态
+  // 刷新登录状态（供登录/登出后调用）
   const refreshAuth = () => {
     const logged = isLoggedIn();
     setLoggedIn(logged);
@@ -27,10 +30,6 @@ export default function UserMenu() {
       setUsername(user?.username || "");
     }
   };
-
-  useEffect(() => {
-    refreshAuth();
-  }, []);
 
   // 点击外部关闭下拉菜单
   useEffect(() => {

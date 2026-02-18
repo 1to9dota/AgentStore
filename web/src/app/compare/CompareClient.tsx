@@ -85,9 +85,7 @@ function CompareRadarChart({
   return (
     <svg
       viewBox={`0 0 ${size} ${size}`}
-      width={size}
-      height={size}
-      className="drop-shadow-lg mx-auto"
+      className="drop-shadow-lg mx-auto w-56 h-56 sm:w-72 sm:h-72 lg:w-80 lg:h-80"
     >
       {/* 背景网格 */}
       {gridLevels.map((level) => (
@@ -230,18 +228,10 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
   // 对比表格的行定义
   const scoreKeys = DIMENSIONS;
 
-  // 找出每行最大值的索引
-  const findMaxIndex = (values: number[]) => {
-    if (values.length === 0) return -1;
-    let maxIdx = 0;
-    for (let i = 1; i < values.length; i++) {
-      if (values[i] > values[maxIdx]) maxIdx = i;
-    }
-    return maxIdx;
-  };
+
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
       {/* 页面标题 */}
       <h1 className="text-3xl font-bold text-zinc-100 mb-2">插件对比</h1>
       <p className="text-zinc-400 mb-8">
@@ -351,7 +341,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
             在上方搜索并添加插件开始对比
           </p>
           <p className="mt-1 text-sm text-zinc-600">
-            也可以从插件详情页点击"添加到对比"按钮
+            也可以从插件详情页点击&ldquo;添加到对比&rdquo;按钮
           </p>
         </div>
       )}
@@ -386,7 +376,7 @@ export default function CompareClient({ allCapabilities }: CompareClientProps) {
 
           {/* 对比表格 */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-zinc-800">
                   <th className="sticky left-0 bg-zinc-900 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">

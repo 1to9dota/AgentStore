@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getAllCapabilities } from "@/lib/data";
-import { Capability } from "@/lib/types";
+
 import HomeClient from "./HomeClient";
 
 // 首页独立 metadata

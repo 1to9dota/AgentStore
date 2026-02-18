@@ -1,6 +1,7 @@
 """SQLite 数据库层"""
 import json
 import os
+import re
 import sqlite3
 from pathlib import Path
 
@@ -158,9 +159,19 @@ def init_db():
     conn.close()
 
 
+_VALID_IDENTIFIER = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+_VALID_COL_DEF = re.compile(r"^[A-Z]+(\s+DEFAULT\s+'[^']*'|\s+DEFAULT\s+\d+|\s+DEFAULT\s+\[\]|\s+DEFAULT\s+'')?$", re.IGNORECASE)
+
+
 def _safe_add_columns(conn: sqlite3.Connection, table: str, columns: list[tuple[str, str]]):
-    """安全地为表添加新列，已存在则跳过"""
+    """安全地为表添加新列，已存在则跳过。对表名和列名做白名单校验防止注入。"""
+    if not _VALID_IDENTIFIER.match(table):
+        raise ValueError(f"非法表名: {table}")
     for col_name, col_def in columns:
+        if not _VALID_IDENTIFIER.match(col_name):
+            raise ValueError(f"非法列名: {col_name}")
+        if not _VALID_COL_DEF.match(col_def):
+            raise ValueError(f"非法列定义: {col_def}")
         try:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_def}")
         except sqlite3.OperationalError:
@@ -233,18 +244,6 @@ def get_usage_stats(api_key_id: int) -> dict:
         "last_7_days": daily,
     }
 
-
-def get_api_key_by_hash(key_hash_value: str) -> dict | None:
-    """通过 key_hash 查找 API Key 记录"""
-    conn = _get_conn()
-    try:
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1",
-            (key_hash_value,),
-        ).fetchone()
-        return dict(row) if row else None
-    finally:
-        conn.close()
 
 
 def get_today_usage_count(api_key_id: int) -> int:

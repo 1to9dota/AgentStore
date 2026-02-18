@@ -8,7 +8,7 @@ interface TrendingSectionProps {
 
 /**
  * 趋势模块 — Server Component
- * 展示"本周热门"（按 stars 排序）和"最近更新"（按 last_updated 排序）
+ * 展示"最受欢迎"（按 stars 排序）和"最近更新"（按 last_updated 排序）
  */
 export default function TrendingSection({ capabilities }: TrendingSectionProps) {
   // 按 stars 降序取 Top 5
@@ -26,13 +26,13 @@ export default function TrendingSection({ capabilities }: TrendingSectionProps) 
 
   return (
     <section className="mx-auto max-w-5xl px-6 py-12">
-      {/* 本周热门 */}
+      {/* 最受欢迎 */}
       <div className="mb-10">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-zinc-200">
           <span className="text-2xl">🔥</span>
-          本周热门
+          最受欢迎
         </h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scroll-smooth touch-pan-x [-webkit-overflow-scrolling:touch]">
           {topByStars.map((cap) => (
             <TrendingCard key={cap.slug} capability={cap} />
           ))}
@@ -45,7 +45,7 @@ export default function TrendingSection({ capabilities }: TrendingSectionProps) 
           <span className="text-2xl">🆕</span>
           最近更新
         </h2>
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scroll-smooth touch-pan-x [-webkit-overflow-scrolling:touch]">
           {recentlyUpdated.map((cap) => (
             <TrendingCard key={cap.slug} capability={cap} />
           ))}
@@ -62,7 +62,7 @@ function TrendingCard({ capability }: { capability: Capability }) {
   return (
     <Link
       href={`/capability/${slug}`}
-      className="group flex min-w-[220px] shrink-0 flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 transition-all hover:border-zinc-600 hover:bg-zinc-800/80"
+      className="group flex min-w-[180px] md:min-w-[220px] shrink-0 flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 transition-all hover:border-zinc-600 hover:bg-zinc-800/80 active:scale-[0.98]"
     >
       {/* 顶部：名称 + 评分 */}
       <div className="flex items-start justify-between gap-2">

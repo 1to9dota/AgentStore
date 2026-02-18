@@ -71,13 +71,18 @@ const PIE_COLORS = [
 // ==================== SVG 饼图组件 ====================
 function PieChart({ data }: { data: { label: string; count: number; percentage: number; category: string }[] }) {
   const total = data.reduce((sum, d) => sum + d.count, 0);
-  let cumulativeAngle = 0;
+
+  // 预计算每个扇形的起始角度
+  const cumulativeAngles: number[] = [];
+  data.reduce((acc, d) => {
+    cumulativeAngles.push(acc);
+    return acc + (d.count / total) * 360;
+  }, 0);
 
   // 生成饼图扇形路径
   const slices = data.map((d, i) => {
     const angle = (d.count / total) * 360;
-    const startAngle = cumulativeAngle;
-    cumulativeAngle += angle;
+    const startAngle = cumulativeAngles[i];
 
     const startRad = ((startAngle - 90) * Math.PI) / 180;
     const endRad = ((startAngle + angle - 90) * Math.PI) / 180;
@@ -109,7 +114,7 @@ function PieChart({ data }: { data: { label: string; count: number; percentage: 
   return (
     <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:gap-10">
       {/* SVG 饼图 */}
-      <svg viewBox="0 0 200 200" className="h-52 w-52 shrink-0">
+      <svg viewBox="0 0 200 200" className="h-40 w-40 sm:h-52 sm:w-52 shrink-0">
         {slices}
       </svg>
       {/* 图例 */}
@@ -166,7 +171,7 @@ export default function StatsPage() {
   const maxLangCount = Math.max(...langDist.map((l) => l.count), 1);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-10">
       {/* 页面标题 */}
       <h1 className="mb-2 text-3xl font-bold tracking-tight">
         AgentStore{" "}
@@ -230,7 +235,7 @@ export default function StatsPage() {
           <div className="space-y-3">
             {langDist.map((item, i) => (
               <div key={item.language} className="flex items-center gap-3">
-                <span className="w-24 shrink-0 text-right text-sm text-zinc-300">
+                <span className="w-16 sm:w-24 shrink-0 text-right text-xs sm:text-sm text-zinc-300">
                   {item.language}
                 </span>
                 <div className="relative flex-1 h-6 rounded-md bg-zinc-800 overflow-hidden">
@@ -254,14 +259,14 @@ export default function StatsPage() {
       <section className="mb-12">
         <SectionTitle>Top 10 高分插件</SectionTitle>
         <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[480px]">
             <thead>
               <tr className="border-b border-zinc-800 text-left text-zinc-400">
-                <th className="px-4 py-3 font-medium">#</th>
-                <th className="px-4 py-3 font-medium">名称</th>
-                <th className="px-4 py-3 font-medium">分类</th>
-                <th className="px-4 py-3 font-medium text-right">总分</th>
-                <th className="px-4 py-3 font-medium text-right">Stars</th>
+                <th className="px-3 sm:px-4 py-3 font-medium">#</th>
+                <th className="px-3 sm:px-4 py-3 font-medium">名称</th>
+                <th className="px-3 sm:px-4 py-3 font-medium">分类</th>
+                <th className="px-3 sm:px-4 py-3 font-medium text-right">总分</th>
+                <th className="px-3 sm:px-4 py-3 font-medium text-right">Stars</th>
               </tr>
             </thead>
             <tbody>
@@ -364,10 +369,10 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-xl border bg-gradient-to-br p-5 ${colorMap[color]}`}
+      className={`rounded-xl border bg-gradient-to-br p-3 sm:p-5 ${colorMap[color]}`}
     >
-      <p className="text-sm text-zinc-400">{label}</p>
-      <p className="mt-1 text-3xl font-bold">{value}</p>
+      <p className="text-xs sm:text-sm text-zinc-400">{label}</p>
+      <p className="mt-1 text-2xl sm:text-3xl font-bold">{value}</p>
       {sub && <p className="mt-1 text-xs text-zinc-500">{sub}</p>}
     </div>
   );

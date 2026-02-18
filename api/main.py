@@ -5,8 +5,8 @@ import time
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+import hashlib
 from .database import search_capabilities, get_capability, get_categories, get_stats, init_db, log_usage, _get_conn, get_today_usage_count
-from .users import pwd_context
 from .users import router as users_router
 from .schemas import (
     SearchResponse,
@@ -85,24 +85,19 @@ logger = logging.getLogger("agentstore.usage")
 
 
 def _resolve_api_key(raw_key: str) -> dict | None:
-    """通过遍历活跃 key 验证 API Key（bcrypt 无法直接查询，需逐一比对）"""
+    """通过 SHA-256 hash 直接查询验证 API Key，O(1) 复杂度"""
     if not raw_key or not raw_key.startswith("ask_"):
         return None
-    # 用前缀缩小范围
-    prefix = raw_key[:8]
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            "SELECT id, user_id, key_hash, daily_limit, is_active FROM api_keys WHERE key_prefix = ? AND is_active = 1",
-            (prefix,),
-        ).fetchall()
+        row = conn.execute(
+            "SELECT id, user_id, key_hash, daily_limit, is_active FROM api_keys WHERE key_hash = ? AND is_active = 1",
+            (key_hash,),
+        ).fetchone()
+        return dict(row) if row else None
     finally:
         conn.close()
-
-    for row in rows:
-        if pwd_context.verify(raw_key, row["key_hash"]):
-            return dict(row)
-    return None
 
 
 @app.middleware("http")
@@ -118,13 +113,29 @@ async def usage_tracking_middleware(request: Request, call_next):
         if api_key_record:
             daily_limit = api_key_record["daily_limit"]
             if daily_limit != -1:  # -1 表示无限制
-                today_count = get_today_usage_count(api_key_record["id"])
-                if today_count >= daily_limit:
-                    return Response(
-                        content='{"detail":"API 调用次数已达今日上限"}',
-                        status_code=429,
-                        media_type="application/json",
+                # 原子操作：在同一个事务中检查并插入，避免 TOCTOU 竞态
+                conn = _get_conn()
+                try:
+                    today_count = conn.execute(
+                        "SELECT COUNT(*) FROM usage_logs WHERE api_key_id = ? AND date(created_at) = date('now')",
+                        (api_key_record["id"],),
+                    ).fetchone()[0]
+                    if today_count >= daily_limit:
+                        conn.close()
+                        return Response(
+                            content='{"detail":"API 调用次数已达今日上限"}',
+                            status_code=429,
+                            media_type="application/json",
+                        )
+                    # 预插入占位日志（在同一事务中保证原子性）
+                    conn.execute(
+                        "INSERT INTO usage_logs (api_key_id, user_id, endpoint, method, status_code, response_time_ms) VALUES (?, ?, ?, ?, 0, 0)",
+                        (api_key_record["id"], api_key_record["user_id"], request.url.path, request.method),
                     )
+                    pre_log_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                    conn.commit()
+                finally:
+                    conn.close()
 
     response = await call_next(request)
     duration_ms = int((time.time() - start) * 1000)
@@ -132,9 +143,22 @@ async def usage_tracking_middleware(request: Request, call_next):
     # 只记录 /api/v1/ 路径的请求
     if request.url.path.startswith("/api/v1/"):
         try:
-            api_key_id = api_key_record["id"] if api_key_record else None
-            user_id = api_key_record["user_id"] if api_key_record else None
-            log_usage(api_key_id, user_id, request.url.path, request.method, response.status_code, duration_ms)
+            if api_key_record and api_key_record.get("daily_limit", -1) != -1:
+                # 已经预插入了日志，更新实际状态码和耗时
+                conn = _get_conn()
+                try:
+                    conn.execute(
+                        "UPDATE usage_logs SET status_code = ?, response_time_ms = ? WHERE id = ?",
+                        (response.status_code, duration_ms, pre_log_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+            else:
+                api_key_id = api_key_record["id"] if api_key_record else None
+                user_id = api_key_record["user_id"] if api_key_record else None
+                if api_key_id:  # 只有有效 API Key 才记录日志
+                    log_usage(api_key_id, user_id, request.url.path, request.method, response.status_code, duration_ms)
         except Exception:
             logger.exception("记录使用日志失败")
 

@@ -59,21 +59,16 @@ export default function AdminClient({
   recentPlugins,
   lowScorePlugins,
 }: AdminClientProps) {
-  // 密码校验状态
-  const [authed, setAuthed] = useState(false);
+  // 密码校验状态（初始化时直接从 sessionStorage 读取）
+  const [authed, setAuthed] = useState(() =>
+    typeof window !== "undefined" && sessionStorage.getItem("admin_authed") === "1"
+  );
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
   // 从 API 获取的动态数据
   const [totalUsers, setTotalUsers] = useState<string>("加载中...");
   const [totalComments, setTotalComments] = useState<string>("加载中...");
-
-  // 检查是否已通过校验（sessionStorage 缓存）
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_authed") === "1") {
-      setAuthed(true);
-    }
-  }, []);
 
   // 客户端加载用户数和评论数（所有 hooks 必须在条件 return 之前）
   useEffect(() => {
@@ -89,15 +84,22 @@ export default function AdminClient({
       .catch(() => setTotalComments("N/A"));
   }, [authed]);
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const adminPwd = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "agentstore2026";
-    if (password === adminPwd) {
-      setAuthed(true);
-      sessionStorage.setItem("admin_authed", "1");
-      setAuthError("");
-    } else {
-      setAuthError("密码错误");
+    setAuthError("");
+    try {
+      const res = await fetch(`${API_URL}/api/v1/admin/verify`, {
+        method: "POST",
+        headers: { "X-Admin-Password": password },
+      });
+      if (res.ok) {
+        setAuthed(true);
+        sessionStorage.setItem("admin_authed", "1");
+      } else {
+        setAuthError("密码错误");
+      }
+    } catch {
+      setAuthError("服务器连接失败");
     }
   };
 
@@ -201,7 +203,7 @@ export default function AdminClient({
         <section className="mb-10">
           <h2 className="text-lg font-semibold text-gray-300 mb-4">分类分布</h2>
           <div className="overflow-x-auto rounded-xl border border-gray-800">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[540px]">
               <thead>
                 <tr className="bg-gray-900 text-gray-400 border-b border-gray-800">
                   <th className="text-left px-4 py-3 font-medium">分类</th>
@@ -247,7 +249,7 @@ export default function AdminClient({
         <section className="mb-10">
           <h2 className="text-lg font-semibold text-gray-300 mb-4">最近添加的插件</h2>
           <div className="overflow-x-auto rounded-xl border border-gray-800">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="bg-gray-900 text-gray-400 border-b border-gray-800">
                   <th className="text-left px-4 py-3 font-medium">名称</th>
@@ -301,7 +303,7 @@ export default function AdminClient({
           </h2>
           {lowScorePlugins.length > 0 ? (
             <div className="overflow-x-auto rounded-xl border border-gray-800">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[400px]">
                 <thead>
                   <tr className="bg-gray-900 text-gray-400 border-b border-gray-800">
                     <th className="text-left px-4 py-3 font-medium">名称</th>
