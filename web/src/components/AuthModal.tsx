@@ -46,7 +46,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end md:items-center md:justify-center">
+    <div className="fixed inset-0 z-[100] flex items-end md:items-center md:justify-center md:p-4">
       {/* 遮罩层 */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -54,7 +54,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
       />
 
       {/* 弹窗内容：移动端底部弹出，桌面端居中 */}
-      <div className="relative z-10 w-full rounded-t-2xl md:rounded-2xl md:max-w-md border border-zinc-700 bg-zinc-900 p-6 pb-8 shadow-2xl">
+      <div className="relative z-10 w-full rounded-t-2xl md:rounded-2xl md:max-w-md md:max-h-[90vh] md:overflow-y-auto border border-zinc-700 bg-zinc-900 p-6 pb-8 shadow-2xl">
         {/* 移动端拖拽条指示器 */}
         <div className="mb-4 flex justify-center md:hidden">
           <div className="h-1 w-10 rounded-full bg-zinc-600" />
