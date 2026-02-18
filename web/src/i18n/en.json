@@ -1,7 +1,38 @@
 {
   "nav": { "home": "Home", "search": "Search", "stats": "Dashboard", "compare": "Compare" },
-  "home": { "title": "AgentStore", "subtitle": "Discover the Best AI Agent Capabilities", "search_placeholder": "Search plugins...", "top_rankings": "Top Rankings", "categories": "Categories", "view_all": "View All" },
-  "detail": { "scores": "Five-Dimension Scores", "ai_analysis": "AI Analysis", "install": "Installation Guide", "usage": "Usage", "safety": "Safety Tips", "safe": "Safety Notes", "project_info": "Project Info", "provider": "Provider", "protocol": "Protocol", "language": "Language", "contributors": "Contributors", "tests": "Tests", "typescript": "TypeScript", "updated": "Last Updated", "view_source": "View Source", "yes": "Yes", "no": "No" },
-  "stats": { "title": "AgentStore Ecosystem Dashboard", "total": "Total Plugins", "avg_score": "Avg Score", "categories": "Categories", "test_coverage": "Test Coverage" },
+  "home": {
+    "title": "AgentStore",
+    "subtitle": "The MCP Plugin Registry & Trust System",
+    "search_placeholder": "Search MCP plugins...",
+    "top_rankings": "Top Rated",
+    "categories": "Categories",
+    "view_all": "View All"
+  },
+  "detail": {
+    "scores": "Five-Dimension Scores",
+    "ai_analysis": "AI Analysis",
+    "install": "Installation Guide",
+    "usage": "Usage",
+    "safety": "Safety Tips",
+    "safe": "Safety Notes",
+    "project_info": "Project Info",
+    "provider": "Provider",
+    "protocol": "Protocol",
+    "language": "Language",
+    "contributors": "Contributors",
+    "tests": "Tests",
+    "typescript": "TypeScript",
+    "updated": "Last Updated",
+    "view_source": "View Source",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "stats": {
+    "title": "AgentStore Ecosystem Dashboard",
+    "total": "Total Plugins",
+    "avg_score": "Avg Score",
+    "categories": "Categories",
+    "test_coverage": "Test Coverage"
+  },
   "common": { "score": "Score", "stars": "Stars", "forks": "Forks" }
 }

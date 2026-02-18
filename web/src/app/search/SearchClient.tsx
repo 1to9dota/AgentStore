@@ -14,9 +14,9 @@ const PAGE_SIZE = 20;
 type SortKey = "score" | "stars" | "updated";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "score", label: "评分最高" },
-  { key: "stars", label: "Stars 最多" },
-  { key: "updated", label: "最近更新" },
+  { key: "score", label: "Top Rated" },
+  { key: "stars", label: "Most Stars" },
+  { key: "updated", label: "Recently Updated" },
 ];
 
 /** 热门搜索标签（高频分类 + 关键词） */

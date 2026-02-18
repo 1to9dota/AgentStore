@@ -63,11 +63,15 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("zh");
   const [mounted, setMounted] = useState(false);
 
-  // 客户端挂载后从 localStorage 读取语言设置
+  // 客户端挂载后从 localStorage 读取语言设置，无记录则按浏览器语言决定
   useEffect(() => {
     const saved = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
     if (saved && (saved === "zh" || saved === "en")) {
       setLocaleState(saved);
+    } else {
+      // 浏览器语言以 zh 开头则中文，否则默认英文
+      const browserLang = navigator.language || "";
+      setLocaleState(browserLang.startsWith("zh") ? "zh" : "en");
     }
     setMounted(true);
   }, []);
@@ -84,11 +88,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     setLocale,
   };
 
-  // 服务端渲染时使用默认中文，避免 hydration 不匹配
+  // 服务端渲染时使用默认英文，避免 hydration 不匹配
   if (!mounted) {
     return (
       <LocaleContext.Provider
-        value={{ locale: "zh", t: zhMessages, setLocale }}
+        value={{ locale: "en", t: enMessages, setLocale }}
       >
         {children}
       </LocaleContext.Provider>

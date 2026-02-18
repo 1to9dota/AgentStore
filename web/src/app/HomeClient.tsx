@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CapabilityCard from "@/components/CapabilityCard";
 import { Capability, CATEGORIES } from "@/lib/types";
+import { useLocale } from "@/i18n";
 
 interface HomeClientProps {
   capabilities: Capability[];
@@ -13,6 +14,7 @@ interface HomeClientProps {
 export default function HomeClient({ capabilities }: HomeClientProps) {
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const { t, locale } = useLocale();
 
   // 按分数排序的 Top 列表
   const topCapabilities = useMemo(
@@ -53,17 +55,19 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
             </span>
           </h1>
           <p className="mt-4 text-lg text-zinc-400">
-            Agent 能力注册表 + 信誉系统
+            {locale === "zh" ? "Agent 能力注册表 + 信誉系统" : "The MCP Plugin Registry & Trust System"}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
-            发现、评估和信任 AI Agent 能力 -- 五维雷达评分，一目了然
+            {locale === "zh"
+              ? "发现、评估和信任 AI Agent 能力 -- 五维雷达评分，一目了然"
+              : "Discover, evaluate and trust AI Agent capabilities — 5-dimension radar scoring at a glance"}
           </p>
 
           {/* 搜索栏 */}
           <div className="mt-8 flex items-center justify-center gap-2">
             <input
               type="text"
-              placeholder="搜索 Agent 能力..."
+              placeholder={t.home.search_placeholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -73,7 +77,7 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
               onClick={handleSearch}
               className="shrink-0 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-500"
             >
-              搜索
+              {locale === "zh" ? "搜索" : "Search"}
             </button>
           </div>
         </div>
@@ -82,11 +86,11 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
       {/* Top 列表 */}
       <section className="mx-auto max-w-5xl px-6 py-12">
         <h2 className="mb-6 text-xl font-semibold text-zinc-200">
-          Top Agent 能力
+          {locale === "zh" ? "Top Agent 能力" : "Top Agent Capabilities"}
         </h2>
 
         {topCapabilities.length === 0 ? (
-          <p className="text-zinc-500">暂无数据</p>
+          <p className="text-zinc-500">{locale === "zh" ? "暂无数据" : "No data yet"}</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {topCapabilities.map((cap) => (
@@ -100,7 +104,7 @@ export default function HomeClient({ capabilities }: HomeClientProps) {
       {activeCategories.length > 0 && (
         <section className="mx-auto max-w-5xl px-6 pb-16">
           <h2 className="mb-6 text-xl font-semibold text-zinc-200">
-            按分类浏览
+            {locale === "zh" ? "按分类浏览" : "Browse by Category"}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
             {activeCategories.map(([key, label]) => {
