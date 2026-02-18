@@ -11,6 +11,8 @@ import ScoreBadge from "@/components/ScoreBadge";
 import FavoriteButton from "@/components/FavoriteButton";
 import CompareButton from "@/components/CompareButton";
 import CommentSection from "@/components/CommentSection";
+import SimilarPlugins from "@/components/SimilarPlugins";
+import CopyCodeBlock from "@/components/CopyCodeBlock";
 
 // SSG: 预生成所有详情页（slug 含 / 需拆为数组）
 export function generateStaticParams() {
@@ -165,7 +167,7 @@ export default async function CapabilityDetailPage({
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-10">
       {/* 结构化数据 */}
       <script
         type="application/ld+json"
@@ -243,7 +245,9 @@ export default async function CapabilityDetailPage({
               五维评分
             </h2>
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-              <RadarChart scores={cap.scores} size={260} />
+              <div className="w-48 sm:w-auto shrink-0">
+                <RadarChart scores={cap.scores} size={260} />
+              </div>
               <div className="flex-1 w-full space-y-3">
                 {dimensions.map((dim) => (
                   <ScoreBar
@@ -274,9 +278,11 @@ export default async function CapabilityDetailPage({
             <h2 className="mb-3 text-lg font-semibold text-zinc-200">
               安装指南
             </h2>
-            <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-zinc-950 prose-pre:rounded-lg prose-code:text-emerald-400">
-              <ReactMarkdown>{cap.install_guide}</ReactMarkdown>
-            </div>
+            <CopyCodeBlock>
+              <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-zinc-950 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-code:text-emerald-400">
+                <ReactMarkdown>{cap.install_guide}</ReactMarkdown>
+              </div>
+            </CopyCodeBlock>
           </div>
 
           {/* 使用方法 */}
@@ -284,9 +290,11 @@ export default async function CapabilityDetailPage({
             <h2 className="mb-3 text-lg font-semibold text-zinc-200">
               使用方法
             </h2>
-            <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-zinc-950 prose-pre:rounded-lg prose-code:text-emerald-400">
-              <ReactMarkdown>{cap.usage_guide}</ReactMarkdown>
-            </div>
+            <CopyCodeBlock>
+              <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-zinc-950 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-code:text-emerald-400">
+                <ReactMarkdown>{cap.usage_guide}</ReactMarkdown>
+              </div>
+            </CopyCodeBlock>
           </div>
 
           {/* 安全注意事项 */}
@@ -307,12 +315,15 @@ export default async function CapabilityDetailPage({
             </div>
           )}
 
+          {/* 相似插件推荐 */}
+          <SimilarPlugins current={cap} allCapabilities={getAllCapabilities()} />
+
           {/* 用户评论区 */}
           <CommentSection slug={fullSlug} />
         </div>
 
         {/* 右侧边栏 */}
-        <aside className="space-y-6">
+        <aside className="order-last lg:order-none space-y-6">
           {/* GitHub 信息卡 */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-500">

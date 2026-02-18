@@ -5,10 +5,33 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import CapabilityCard from "@/components/CapabilityCard";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Capability } from "@/lib/types";
+import { Capability, CATEGORIES } from "@/lib/types";
 
 /** 每次"加载更多"显示的条数 */
 const PAGE_SIZE = 20;
+
+/** 排序选项 */
+type SortKey = "score" | "stars" | "updated";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "score", label: "评分最高" },
+  { key: "stars", label: "Stars 最多" },
+  { key: "updated", label: "最近更新" },
+];
+
+/** 热门搜索标签（高频分类 + 关键词） */
+const HOT_TAGS = [
+  "database",
+  "search",
+  "file",
+  "git",
+  "browser",
+  "AI",
+  "Claude",
+  "API",
+  "Docker",
+  "Slack",
+];
 
 /**
  * 搜索结果的内部组件
@@ -37,8 +60,17 @@ function SearchResultsInner({
   // "加载更多"分页：当前显示的条数上限
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
+  // 排序
+  const [sortKey, setSortKey] = useState<SortKey>("score");
+
+  // 分类筛选
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // 输入框是否聚焦（控制热门标签显示）
+  const [isFocused, setIsFocused] = useState(false);
+
   // 搜索过滤逻辑
-  const results = useMemo(() => {
+  const filteredResults = useMemo(() => {
     if (!debouncedQuery.trim()) return [];
     const q = debouncedQuery.toLowerCase();
     return capabilities.filter(
@@ -49,6 +81,43 @@ function SearchResultsInner({
         c.provider.toLowerCase().includes(q)
     );
   }, [debouncedQuery, capabilities]);
+
+  // 搜索结果中出现的分类（用于筛选 chips）
+  const resultCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of filteredResults) {
+      counts.set(c.category, (counts.get(c.category) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1]);
+  }, [filteredResults]);
+
+  // 分类过滤
+  const categoryFiltered = useMemo(() => {
+    if (!activeCategory) return filteredResults;
+    return filteredResults.filter((c) => c.category === activeCategory);
+  }, [filteredResults, activeCategory]);
+
+  // 排序
+  const results = useMemo(() => {
+    const sorted = [...categoryFiltered];
+    switch (sortKey) {
+      case "score":
+        sorted.sort((a, b) => b.overall_score - a.overall_score);
+        break;
+      case "stars":
+        sorted.sort((a, b) => b.stars - a.stars);
+        break;
+      case "updated":
+        sorted.sort(
+          (a, b) =>
+            new Date(b.last_updated).getTime() -
+            new Date(a.last_updated).getTime()
+        );
+        break;
+    }
+    return sorted;
+  }, [categoryFiltered, sortKey]);
 
   // 当前实际显示的结果（分页截断）
   const visibleResults = useMemo(
@@ -64,11 +133,12 @@ function SearchResultsInner({
     setVisibleCount((prev) => prev + PAGE_SIZE);
   }, []);
 
-  // 输入变化时更新本地状态，并重置分页
+  // 输入变化时更新本地状态，并重置分页和筛选
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setLocalQuery(e.target.value);
-      setVisibleCount(PAGE_SIZE); // 新搜索重置分页
+      setVisibleCount(PAGE_SIZE);
+      setActiveCategory(null);
     },
     []
   );
@@ -82,6 +152,20 @@ function SearchResultsInner({
     },
     [localQuery, router]
   );
+
+  // 点击热门标签
+  const handleTagClick = useCallback(
+    (tag: string) => {
+      setLocalQuery(tag);
+      setVisibleCount(PAGE_SIZE);
+      setActiveCategory(null);
+      router.push(`/search?q=${encodeURIComponent(tag)}`);
+    },
+    [router]
+  );
+
+  // 是否显示热门标签：聚焦且无搜索词
+  const showHotTags = isFocused && !localQuery.trim();
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
@@ -97,12 +181,17 @@ function SearchResultsInner({
       <h1 className="mb-4 text-3xl font-bold text-zinc-100">搜索结果</h1>
 
       {/* 实时搜索输入框 */}
-      <div className="relative mb-6">
+      <div className="relative mb-2">
         <input
           type="text"
           value={localQuery}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            // 延迟关闭，让点击事件先触发
+            setTimeout(() => setIsFocused(false), 200);
+          }}
           placeholder="输入关键词搜索 Agent 能力..."
           className="w-full rounded-xl border border-zinc-700 bg-zinc-800/80 px-5 py-3 pr-12 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           autoFocus
@@ -115,6 +204,84 @@ function SearchResultsInner({
         )}
       </div>
 
+      {/* 热门搜索标签 */}
+      {showHotTags && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="text-xs text-zinc-500 self-center mr-1">热门搜索:</span>
+          {HOT_TAGS.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => handleTagClick(tag)}
+              className="rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 排序 + 分类筛选（有搜索结果时显示） */}
+      {debouncedQuery.trim() && filteredResults.length > 0 && (
+        <div className="mb-6 space-y-3">
+          {/* 排序选项 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-500 shrink-0">排序:</span>
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => {
+                  setSortKey(opt.key);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                className={`rounded-lg px-3 py-1 text-xs transition-colors ${
+                  sortKey === opt.key
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 分类筛选 chips */}
+          {resultCategories.length > 1 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-zinc-500 shrink-0">分类:</span>
+              <button
+                onClick={() => {
+                  setActiveCategory(null);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                className={`rounded-lg px-3 py-1 text-xs transition-colors ${
+                  activeCategory === null
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300"
+                }`}
+              >
+                全部 ({filteredResults.length})
+              </button>
+              {resultCategories.map(([cat, count]) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setActiveCategory(activeCategory === cat ? null : cat);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  className={`rounded-lg px-3 py-1 text-xs transition-colors ${
+                    activeCategory === cat
+                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                      : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300"
+                  }`}
+                >
+                  {CATEGORIES[cat] || cat} ({count})
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 结果统计 */}
       {debouncedQuery.trim() ? (
         <p className="mb-8 text-zinc-500">
@@ -126,7 +293,7 @@ function SearchResultsInner({
           )}
         </p>
       ) : (
-        <p className="mb-8 text-zinc-500">请输入搜索关键词</p>
+        !showHotTags && <p className="mb-8 text-zinc-500">请输入搜索关键词</p>
       )}
 
       {/* 搜索结果列表 */}

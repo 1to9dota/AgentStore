@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getAllCapabilities } from "@/lib/data";
 
 import HomeClient from "./HomeClient";
+import TrendingSection from "@/components/TrendingSection";
+import { ValuePropsSection, CTABanner } from "@/components/ValueProps";
 
 // 首页独立 metadata
 export const metadata: Metadata = {
@@ -15,5 +17,12 @@ export const metadata: Metadata = {
 
 export default function Home() {
   const capabilities = getAllCapabilities();
-  return <HomeClient capabilities={capabilities} />;
+  return (
+    <>
+      <HomeClient capabilities={capabilities} />
+      <ValuePropsSection />
+      <TrendingSection capabilities={capabilities} />
+      <CTABanner />
+    </>
+  );
 }
