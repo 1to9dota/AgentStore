@@ -51,15 +51,20 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end md:items-start md:justify-center md:px-4 md:pt-16 md:pb-4">
+    <div className="fixed inset-0 z-[100]">
       {/* 遮罩层 */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* 弹窗内容：移动端底部弹出，桌面端居中 */}
-      <div className="relative z-10 w-full rounded-t-2xl md:rounded-2xl md:max-w-md md:max-h-[90vh] md:overflow-y-auto border border-zinc-700 bg-zinc-900 p-6 pb-8 shadow-2xl">
+      {/* 弹窗内容：
+          移动端 → absolute 贴底部
+          桌面端 → absolute top-[60px] 水平居中，完全不依赖 flex 居中 */}
+      <div className="absolute bottom-0 left-0 right-0 z-10
+                      md:bottom-auto md:top-[60px] md:left-1/2 md:-translate-x-1/2
+                      md:w-full md:max-w-md
+                      rounded-t-2xl md:rounded-2xl border border-zinc-700 bg-zinc-900 p-6 pb-8 shadow-2xl">
         {/* 移动端拖拽条指示器 */}
         <div className="mb-4 flex justify-center md:hidden">
           <div className="h-1 w-10 rounded-full bg-zinc-600" />
