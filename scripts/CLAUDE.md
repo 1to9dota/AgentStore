@@ -7,6 +7,6 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #6891 | 3:24 AM | 🟣 | AgentStore Core Data Models Created in models.py | ~485 |
-| #6870 | 3:23 AM | 🟣 | Agent Teams Dispatched MCP Data Source Scraper Task | ~266 |
+| #7786 | 6:13 AM | 🔵 | AgentStore Tencent Cloud Deployment Script Uses rsync + Docker Compose | ~307 |
+| #7423 | 5:24 AM | 🟣 | Semantic Search via OpenAI Embeddings Added to AgentStore | ~402 |
 </claude-mem-context>

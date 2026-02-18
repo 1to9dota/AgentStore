@@ -1,9 +1,9 @@
-"""用户系统：注册、登录、收藏、评论"""
+"""用户系统：注册、登录、收藏、评论、插件提交"""
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -59,6 +59,26 @@ class CommentOut(BaseModel):
     capability_slug: str
     content: str
     rating: int
+    created_at: str
+
+
+class SubmissionRequest(BaseModel):
+    """插件提交请求"""
+    name: str = Field(..., min_length=1, max_length=100)
+    repo_url: str = Field(..., min_length=10, max_length=500)
+    description: str = Field(..., min_length=10, max_length=2000)
+    category: str = Field(..., min_length=1, max_length=50)
+
+
+class SubmissionOut(BaseModel):
+    """插件提交返回"""
+    id: int
+    username: str
+    name: str
+    repo_url: str
+    description: str
+    category: str
+    status: str
     created_at: str
 
 
@@ -253,3 +273,147 @@ def list_comments(slug: str):
     # 计算平均评分
     avg_rating = round(sum(c.rating for c in comments) / len(comments), 1) if comments else 0
     return {"comments": comments, "total": len(comments), "avg_rating": avg_rating}
+
+
+# ── 管理员校验 ──────────────────────────────────────────
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "agentstore2026")
+
+
+def _check_admin(x_admin_password: str = Header(...)):
+    """通过 X-Admin-Password header 校验管理员身份"""
+    if x_admin_password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="管理员密码错误")
+
+
+# ── 插件提交路由 ──────────────────────────────────────────
+@router.post("/api/v1/submissions", response_model=SubmissionOut)
+def create_submission(req: SubmissionRequest, user: dict = Depends(_get_current_user)):
+    """提交新插件（需登录）"""
+    conn = _get_conn()
+    try:
+        # 频率限制：同一用户每分钟限 1 次提交
+        recent = conn.execute(
+            """SELECT id FROM submissions
+               WHERE user_id = ? AND created_at > datetime('now', '-1 minute')""",
+            (user["id"],),
+        ).fetchone()
+        if recent:
+            raise HTTPException(status_code=429, detail="提交太频繁，请稍后再试")
+
+        cursor = conn.execute(
+            "INSERT INTO submissions (user_id, name, repo_url, description, category) VALUES (?, ?, ?, ?, ?)",
+            (user["id"], req.name, req.repo_url, req.description, req.category),
+        )
+        conn.commit()
+        submission_id = cursor.lastrowid
+
+        # 查询刚插入的提交记录
+        row = conn.execute(
+            """SELECT s.id, u.username, s.name, s.repo_url, s.description, s.category, s.status, s.created_at
+               FROM submissions s JOIN users u ON s.user_id = u.id
+               WHERE s.id = ?""",
+            (submission_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    return SubmissionOut(**dict(row))
+
+
+@router.get("/api/v1/submissions")
+def list_submissions(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    status_filter: str = Query("", alias="status"),
+):
+    """获取提交列表（公开，分页）"""
+    conn = _get_conn()
+    try:
+        conditions = []
+        params: list = []
+        if status_filter:
+            conditions.append("s.status = ?")
+            params.append(status_filter)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        # 计算总数
+        total = conn.execute(
+            f"SELECT COUNT(*) FROM submissions s {where}", params
+        ).fetchone()[0]
+
+        offset = (page - 1) * per_page
+        rows = conn.execute(
+            f"""SELECT s.id, u.username, s.name, s.repo_url, s.description, s.category, s.status, s.created_at
+                FROM submissions s JOIN users u ON s.user_id = u.id
+                {where}
+                ORDER BY s.created_at DESC
+                LIMIT ? OFFSET ?""",
+            params + [per_page, offset],
+        ).fetchall()
+    finally:
+        conn.close()
+
+    submissions = [SubmissionOut(**dict(r)) for r in rows]
+    return {"submissions": submissions, "total": total, "page": page, "per_page": per_page}
+
+
+@router.put("/api/v1/submissions/{submission_id}/approve", response_model=SubmissionOut)
+def approve_submission(
+    submission_id: int,
+    _admin: None = Depends(_check_admin),
+):
+    """审核通过提交（需 admin 密码 header）"""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, status FROM submissions WHERE id = ?", (submission_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="提交记录不存在")
+        if row["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"当前状态为 {row['status']}，无法审核")
+
+        conn.execute("UPDATE submissions SET status = 'approved' WHERE id = ?", (submission_id,))
+        conn.commit()
+
+        updated = conn.execute(
+            """SELECT s.id, u.username, s.name, s.repo_url, s.description, s.category, s.status, s.created_at
+               FROM submissions s JOIN users u ON s.user_id = u.id
+               WHERE s.id = ?""",
+            (submission_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    return SubmissionOut(**dict(updated))
+
+
+@router.put("/api/v1/submissions/{submission_id}/reject", response_model=SubmissionOut)
+def reject_submission(
+    submission_id: int,
+    _admin: None = Depends(_check_admin),
+):
+    """拒绝提交（需 admin 密码 header）"""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, status FROM submissions WHERE id = ?", (submission_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="提交记录不存在")
+        if row["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"当前状态为 {row['status']}，无法操作")
+
+        conn.execute("UPDATE submissions SET status = 'rejected' WHERE id = ?", (submission_id,))
+        conn.commit()
+
+        updated = conn.execute(
+            """SELECT s.id, u.username, s.name, s.repo_url, s.description, s.category, s.status, s.created_at
+               FROM submissions s JOIN users u ON s.user_id = u.id
+               WHERE s.id = ?""",
+            (submission_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    return SubmissionOut(**dict(updated))
