@@ -1,10 +1,23 @@
 """GitHub 数据采集"""
 import asyncio
 import base64
+import json
 import re
 from urllib.parse import urlparse
 import httpx
 from .models import CapabilityEntry, RepoData
+
+
+# 兼容性关键词映射（pattern → client 标签）
+_CLIENT_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'\bclaude\s*desktop\b', re.IGNORECASE), "claude"),
+    (re.compile(r'\bclaude\b', re.IGNORECASE), "claude"),
+    (re.compile(r'\bcursor\b', re.IGNORECASE), "cursor"),
+    (re.compile(r'\bwindsurf\b', re.IGNORECASE), "windsurf"),
+    (re.compile(r'\bvs\s*code\b', re.IGNORECASE), "vscode"),
+    (re.compile(r'\bvscode\b', re.IGNORECASE), "vscode"),
+    (re.compile(r'\bcline\b', re.IGNORECASE), "cline"),
+]
 
 
 _TEST_DIRS = frozenset({
@@ -59,15 +72,29 @@ def _parse_owner_repo(url: str) -> tuple[str, str] | None:
     return None
 
 
+def _detect_clients(readme_text: str) -> list[str]:
+    """从 README 文本中检测支持的客户端（case-insensitive）"""
+    if not readme_text:
+        return []
+    seen: set[str] = set()
+    clients: list[str] = []
+    for pattern, client in _CLIENT_PATTERNS:
+        if client not in seen and pattern.search(readme_text):
+            seen.add(client)
+            clients.append(client)
+    return clients
+
+
 async def fetch_repo_data(owner: str, repo: str, *, token: str) -> RepoData:
     headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
     async with httpx.AsyncClient(base_url="https://api.github.com", headers=headers, timeout=15) as client:
-        repo_resp, contrib_resp, issues_resp, readme_resp, contents_resp = await asyncio.gather(
+        repo_resp, contrib_resp, issues_resp, readme_resp, contents_resp, releases_resp = await asyncio.gather(
             _request_with_retry(client, f"/repos/{owner}/{repo}"),
             _request_with_retry(client, f"/repos/{owner}/{repo}/contributors", params={"per_page": 1}),
             _request_with_retry(client, f"/repos/{owner}/{repo}/issues", params={"state": "closed", "per_page": 1}),
             _request_with_retry(client, f"/repos/{owner}/{repo}/readme"),
             _request_with_retry(client, f"/repos/{owner}/{repo}/contents"),
+            _request_with_retry(client, f"/repos/{owner}/{repo}/releases", params={"per_page": 1}),
             return_exceptions=True,
         )
 
@@ -108,6 +135,44 @@ async def fetch_repo_data(owner: str, repo: str, *, token: str) -> RepoData:
             files = {f.get("name", "") for f in contents_resp.json() if isinstance(f, dict)}
             repo_data.has_typescript = "tsconfig.json" in files or repo_data.language == "TypeScript"
             repo_data.has_tests = bool(files & _TEST_DIRS)
+
+            # 提取 package.json 中的依赖
+            if "package.json" in files:
+                try:
+                    pkg_resp = await _request_with_retry(
+                        client, f"/repos/{owner}/{repo}/contents/package.json"
+                    )
+                    if isinstance(pkg_resp, httpx.Response) and pkg_resp.status_code == 200:
+                        pkg_content = base64.b64decode(
+                            pkg_resp.json().get("content", "")
+                        ).decode("utf-8", errors="replace")
+                        pkg_json = json.loads(pkg_content)
+                        deps = list(pkg_json.get("dependencies", {}).keys())
+                        repo_data.dependencies = deps[:10]
+                except Exception:
+                    pass  # package.json 解析失败不影响其他数据
+
+        # 提取最新 release 版本号
+        if isinstance(releases_resp, httpx.Response) and releases_resp.status_code == 200:
+            releases = releases_resp.json()
+            if isinstance(releases, list) and releases:
+                repo_data.latest_version = releases[0].get("tag_name", "")
+
+        # 如果没有 release，尝试用 tags 获取版本号
+        if not repo_data.latest_version:
+            try:
+                tags_resp = await _request_with_retry(
+                    client, f"/repos/{owner}/{repo}/tags", params={"per_page": 1}
+                )
+                if isinstance(tags_resp, httpx.Response) and tags_resp.status_code == 200:
+                    tags = tags_resp.json()
+                    if isinstance(tags, list) and tags:
+                        repo_data.latest_version = tags[0].get("name", "")
+            except Exception:
+                pass  # tags 获取失败不影响其他数据
+
+        # 从 README 检测支持的客户端
+        repo_data.supported_clients = _detect_clients(repo_data.readme_text)
 
         return repo_data
 

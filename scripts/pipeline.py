@@ -55,6 +55,9 @@ def assemble_output(
             "usability": scores.usability,
         },
         "overall_score": scores.overall,
+        "dependencies": repo.dependencies[:10],  # 最多 10 个主要依赖
+        "latest_version": repo.latest_version,
+        "supported_clients": repo.supported_clients,
         "ai_summary": analysis.summary,
         "one_liner": analysis.one_liner,
         "install_guide": analysis.install_guide,

@@ -34,6 +34,9 @@ class RepoData:
     has_tests: bool = False
     readme_text: str = ""
     readme_length: int = 0
+    dependencies: list[str] = field(default_factory=list)  # 主要依赖包名
+    latest_version: str = ""  # 最新版本号
+    supported_clients: list[str] = field(default_factory=list)  # 兼容的客户端
 
 
 @dataclass

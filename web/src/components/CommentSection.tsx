@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { isLoggedIn, getUser } from "@/lib/auth";
-import { getComments, postComment, Comment } from "@/lib/api";
+import { getComments, postComment, toggleCommentLike, Comment } from "@/lib/api";
 import AuthModal from "./AuthModal";
 
 interface CommentSectionProps {
@@ -180,12 +181,18 @@ export default function CommentSection({ slug }: CommentSectionProps) {
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {/* 用户头像 */}
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-400">
+                  <Link
+                    href={`/user/${encodeURIComponent(comment.username)}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-400 transition-colors hover:bg-zinc-700"
+                  >
                     {comment.username[0]?.toUpperCase() || "U"}
-                  </span>
-                  <span className="text-sm font-medium text-zinc-300">
+                  </Link>
+                  <Link
+                    href={`/user/${encodeURIComponent(comment.username)}`}
+                    className="text-sm font-medium text-zinc-300 transition-colors hover:text-blue-400"
+                  >
                     {comment.username}
-                  </span>
+                  </Link>
                   <StarRating value={comment.rating} readonly />
                 </div>
                 <span className="text-xs text-zinc-600">
@@ -195,6 +202,39 @@ export default function CommentSection({ slug }: CommentSectionProps) {
               <p className="ml-11 text-sm leading-relaxed text-zinc-400">
                 {comment.content}
               </p>
+              {/* 点赞按钮 */}
+              <div className="ml-11 mt-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!isLoggedIn()) {
+                      setShowAuth(true);
+                      return;
+                    }
+                    try {
+                      const result = await toggleCommentLike(comment.id);
+                      // 更新本地评论的点赞数
+                      setComments((prev) =>
+                        prev.map((c) =>
+                          c.id === comment.id
+                            ? { ...c, likes_count: result.likes_count }
+                            : c
+                        )
+                      );
+                    } catch {
+                      // 点赞失败静默处理
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-blue-400"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                  </svg>
+                  {comment.likes_count > 0 && (
+                    <span>{comment.likes_count}</span>
+                  )}
+                </button>
+              </div>
             </div>
           ))}
         </div>

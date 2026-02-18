@@ -100,8 +100,164 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
+    # API Key 表
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            key_prefix TEXT NOT NULL,
+            key_hash TEXT NOT NULL,
+            name TEXT NOT NULL DEFAULT 'default',
+            tier TEXT NOT NULL DEFAULT 'free' CHECK(tier IN ('free', 'pro', 'enterprise')),
+            is_active BOOLEAN DEFAULT 1,
+            daily_limit INTEGER NOT NULL DEFAULT 100,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+    # API 使用日志
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS usage_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            api_key_id INTEGER,
+            user_id INTEGER,
+            endpoint TEXT NOT NULL,
+            method TEXT NOT NULL DEFAULT 'GET',
+            status_code INTEGER,
+            response_time_ms INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (api_key_id) REFERENCES api_keys(id)
+        )
+    """)
+    # 评论点赞表
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS comment_likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            comment_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (comment_id) REFERENCES comments(id),
+            UNIQUE(user_id, comment_id)
+        )
+    """)
+    # 索引
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_logs_key_date ON usage_logs(api_key_id, created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_comment_likes_comment ON comment_likes(comment_id)")
+
+    # 安全添加新列（SQLite 不支持 IF NOT EXISTS 语法）
+    _safe_add_columns(conn, "capabilities", [
+        ("dependencies", "TEXT DEFAULT '[]'"),
+        ("latest_version", "TEXT DEFAULT ''"),
+        ("supported_clients", "TEXT DEFAULT '[]'"),
+    ])
+
     conn.commit()
     conn.close()
+
+
+def _safe_add_columns(conn: sqlite3.Connection, table: str, columns: list[tuple[str, str]]):
+    """安全地为表添加新列，已存在则跳过"""
+    for col_name, col_def in columns:
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # 列已存在，跳过
+
+
+# ── Tier 定义 ──────────────────────────────────────────
+TIER_LIMITS = {
+    "free": 100,       # 100 次/天
+    "pro": 10000,      # 10000 次/天
+    "enterprise": -1,  # 无限制
+}
+
+
+def log_usage(api_key_id: int | None, user_id: int | None, endpoint: str, method: str, status_code: int, response_time_ms: int):
+    """记录 API 调用日志"""
+    conn = _get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO usage_logs (api_key_id, user_id, endpoint, method, status_code, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)",
+            (api_key_id, user_id, endpoint, method, status_code, response_time_ms),
+        )
+        # 更新 key 的最后使用时间
+        if api_key_id:
+            conn.execute(
+                "UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (api_key_id,),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_usage_stats(api_key_id: int) -> dict:
+    """获取某个 API Key 的使用统计：今日调用、剩余次数、最近 7 天每天调用"""
+    conn = _get_conn()
+    try:
+        # 获取 key 的 daily_limit
+        key_row = conn.execute(
+            "SELECT daily_limit FROM api_keys WHERE id = ?", (api_key_id,)
+        ).fetchone()
+        daily_limit = key_row["daily_limit"] if key_row else 100
+
+        # 今日调用次数
+        today_count = conn.execute(
+            "SELECT COUNT(*) FROM usage_logs WHERE api_key_id = ? AND date(created_at) = date('now')",
+            (api_key_id,),
+        ).fetchone()[0]
+
+        # 今日剩余次数（-1 表示无限制）
+        today_remaining = -1 if daily_limit == -1 else max(0, daily_limit - today_count)
+
+        # 最近 7 天每天的调用次数
+        daily_rows = conn.execute(
+            """SELECT date(created_at) as day, COUNT(*) as cnt
+               FROM usage_logs
+               WHERE api_key_id = ? AND created_at >= datetime('now', '-7 days')
+               GROUP BY date(created_at)
+               ORDER BY day DESC""",
+            (api_key_id,),
+        ).fetchall()
+        daily = {r["day"]: r["cnt"] for r in daily_rows}
+    finally:
+        conn.close()
+
+    return {
+        "today_count": today_count,
+        "today_remaining": today_remaining,
+        "daily_limit": daily_limit,
+        "last_7_days": daily,
+    }
+
+
+def get_api_key_by_hash(key_hash_value: str) -> dict | None:
+    """通过 key_hash 查找 API Key 记录"""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1",
+            (key_hash_value,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_today_usage_count(api_key_id: int) -> int:
+    """获取某个 key 今日调用次数"""
+    conn = _get_conn()
+    try:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM usage_logs WHERE api_key_id = ? AND date(created_at) = date('now')",
+            (api_key_id,),
+        ).fetchone()[0]
+    finally:
+        conn.close()
+    return count
 
 
 def insert_capabilities(items: list[dict]):
@@ -115,8 +271,9 @@ def insert_capabilities(items: list[dict]):
                  repo_url, endpoint, protocol, stars, forks, language, last_updated,
                  contributors, has_tests, has_typescript, readme_length,
                  reliability, safety, capability, reputation, usability, overall_score,
+                 dependencies, latest_version, supported_clients,
                  ai_summary, one_liner, install_guide, usage_guide, safety_notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 item["slug"], item["name"], item["source"], item["source_id"],
                 item["provider"], item.get("description", ""), item.get("category", ""),
@@ -128,6 +285,9 @@ def insert_capabilities(items: list[dict]):
                 scores.get("reliability", 0), scores.get("safety", 0),
                 scores.get("capability", 0), scores.get("reputation", 0),
                 scores.get("usability", 0), item.get("overall_score", 0),
+                json.dumps(item.get("dependencies", []), ensure_ascii=False),
+                item.get("latest_version", ""),
+                json.dumps(item.get("supported_clients", []), ensure_ascii=False),
                 item.get("ai_summary", ""), item.get("one_liner", ""),
                 item.get("install_guide", ""), item.get("usage_guide", ""),
                 item.get("safety_notes", ""),
@@ -244,4 +404,17 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "reputation": d.pop("reputation", 0),
         "usability": d.pop("usability", 0),
     }
+    # 反序列化 JSON 字符串为 list
+    for key in ("dependencies", "supported_clients"):
+        val = d.get(key)
+        if isinstance(val, str):
+            try:
+                d[key] = json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                d[key] = []
+        elif val is None:
+            d[key] = []
+    # latest_version 保证有默认值
+    if d.get("latest_version") is None:
+        d["latest_version"] = ""
     return d

@@ -1,5 +1,6 @@
-"""用户系统：注册、登录、收藏、评论、插件提交"""
+"""用户系统：注册、登录、收藏、评论、插件提交、API Key 管理"""
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -9,7 +10,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
 
-from .database import _get_conn
+from .database import _get_conn, get_usage_stats, TIER_LIMITS
 
 # ── 配置 ──────────────────────────────────────────────
 _default_secret = os.urandom(32).hex()  # 未配置时随机生成（重启后旧 token 失效）
@@ -60,6 +61,7 @@ class CommentOut(BaseModel):
     content: str
     rating: int
     created_at: str
+    likes_count: int = 0
 
 
 class SubmissionRequest(BaseModel):
@@ -256,11 +258,12 @@ def create_comment(slug: str, req: CommentRequest, user: dict = Depends(_get_cur
 
 @router.get("/api/v1/comments/{slug}")
 def list_comments(slug: str):
-    """获取指定能力的评论列表（无需登录）"""
+    """获取指定能力的评论列表（无需登录），包含每条评论的点赞数"""
     conn = _get_conn()
     try:
         rows = conn.execute(
-            """SELECT c.id, u.username, c.capability_slug, c.content, c.rating, c.created_at
+            """SELECT c.id, u.username, c.capability_slug, c.content, c.rating, c.created_at,
+                      COALESCE((SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id), 0) AS likes_count
                FROM comments c JOIN users u ON c.user_id = u.id
                WHERE c.capability_slug = ?
                ORDER BY c.created_at DESC""",
@@ -417,3 +420,259 @@ def reject_submission(
         conn.close()
 
     return SubmissionOut(**dict(updated))
+
+
+# ── API Key Pydantic 模型 ──────────────────────────────────
+class CreateApiKeyRequest(BaseModel):
+    """创建 API Key 请求"""
+    name: str = Field(default="default", min_length=1, max_length=64)
+
+
+class ApiKeyCreatedResponse(BaseModel):
+    """创建 API Key 返回（包含完整 key，仅此一次）"""
+    id: int
+    key: str
+    key_prefix: str
+    name: str
+    tier: str
+    daily_limit: int
+    created_at: str
+
+
+class ApiKeyOut(BaseModel):
+    """API Key 列表项（不包含完整 key）"""
+    id: int
+    key_prefix: str
+    name: str
+    tier: str
+    daily_limit: int
+    is_active: bool
+    created_at: str
+    last_used_at: Optional[str] = None
+
+
+class UsageStatsResponse(BaseModel):
+    """API Key 使用统计"""
+    today_count: int
+    today_remaining: int
+    daily_limit: int
+    last_7_days: dict
+
+
+# ── API Key 管理路由 ──────────────────────────────────────
+@router.post("/api/v1/api-keys", response_model=ApiKeyCreatedResponse)
+def create_api_key(req: CreateApiKeyRequest, user: dict = Depends(_get_current_user)):
+    """生成新 API Key（需登录，每用户最多 5 个）"""
+    conn = _get_conn()
+    try:
+        # 检查当前用户已有 key 数量
+        count = conn.execute(
+            "SELECT COUNT(*) FROM api_keys WHERE user_id = ?", (user["id"],)
+        ).fetchone()[0]
+        if count >= 5:
+            raise HTTPException(status_code=400, detail="每个用户最多创建 5 个 API Key")
+
+        # 生成 key：ask_ 前缀 + 32 字符随机 hex
+        raw_key = "ask_" + secrets.token_hex(16)
+        key_prefix = raw_key[:8]
+        key_hash = pwd_context.hash(raw_key)
+
+        cursor = conn.execute(
+            """INSERT INTO api_keys (user_id, key_prefix, key_hash, name, tier, daily_limit)
+               VALUES (?, ?, ?, ?, 'free', ?)""",
+            (user["id"], key_prefix, key_hash, req.name, TIER_LIMITS["free"]),
+        )
+        conn.commit()
+        key_id = cursor.lastrowid
+
+        row = conn.execute(
+            "SELECT id, key_prefix, name, tier, daily_limit, created_at FROM api_keys WHERE id = ?",
+            (key_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    return ApiKeyCreatedResponse(
+        id=row["id"],
+        key=raw_key,
+        key_prefix=row["key_prefix"],
+        name=row["name"],
+        tier=row["tier"],
+        daily_limit=row["daily_limit"],
+        created_at=row["created_at"],
+    )
+
+
+@router.get("/api/v1/api-keys")
+def list_api_keys(user: dict = Depends(_get_current_user)):
+    """列出当前用户的所有 API Key（不返回完整 key 或 hash）"""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            """SELECT id, key_prefix, name, tier, daily_limit, is_active, created_at, last_used_at
+               FROM api_keys WHERE user_id = ?
+               ORDER BY created_at DESC""",
+            (user["id"],),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    keys = [ApiKeyOut(**dict(r)) for r in rows]
+    return {"api_keys": keys, "total": len(keys)}
+
+
+@router.delete("/api/v1/api-keys/{key_id}")
+def delete_api_key(key_id: int, user: dict = Depends(_get_current_user)):
+    """删除 API Key（只能删自己的）"""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id FROM api_keys WHERE id = ?", (key_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="API Key 不存在")
+        if row["user_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="无权删除此 API Key")
+
+        conn.execute("DELETE FROM api_keys WHERE id = ?", (key_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {"detail": "API Key 已删除", "key_id": key_id}
+
+
+@router.get("/api/v1/api-keys/{key_id}/usage", response_model=UsageStatsResponse)
+def api_key_usage(key_id: int, user: dict = Depends(_get_current_user)):
+    """查看某个 API Key 的使用统计（需登录，只能查自己的）"""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id FROM api_keys WHERE id = ?", (key_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="API Key 不存在")
+    if row["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="无权查看此 API Key")
+
+    stats = get_usage_stats(key_id)
+    return UsageStatsResponse(**stats)
+
+
+# ── 用户公开 Profile ──────────────────────────────────────
+class UserProfile(BaseModel):
+    """用户公开资料"""
+    username: str
+    created_at: str
+    stats: dict  # {"favorites": 5, "comments": 12, "submissions": 3}
+    recent_comments: list  # [{slug, content, rating, created_at}, ...]
+    recent_favorites: list  # [{slug, name, overall_score, created_at}, ...]
+
+
+@router.get("/api/v1/users/{username}/profile", response_model=UserProfile)
+def get_user_profile(username: str):
+    """获取用户公开 Profile（无需登录）"""
+    conn = _get_conn()
+    try:
+        # 查找用户
+        user_row = conn.execute(
+            "SELECT id, username, created_at FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+        if not user_row:
+            raise HTTPException(status_code=404, detail="用户不存在")
+
+        user_id = user_row["id"]
+
+        # 统计数据
+        fav_count = conn.execute(
+            "SELECT COUNT(*) FROM favorites WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
+        comment_count = conn.execute(
+            "SELECT COUNT(*) FROM comments WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
+        submission_count = conn.execute(
+            "SELECT COUNT(*) FROM submissions WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
+
+        # 最近 5 条评论
+        comment_rows = conn.execute(
+            """SELECT c.capability_slug AS slug, c.content, c.rating, c.created_at
+               FROM comments c
+               WHERE c.user_id = ?
+               ORDER BY c.created_at DESC LIMIT 5""",
+            (user_id,),
+        ).fetchall()
+
+        # 最近 5 条收藏（关联 capabilities 表取名称和分数）
+        fav_rows = conn.execute(
+            """SELECT f.capability_slug AS slug,
+                      COALESCE(cap.name, f.capability_slug) AS name,
+                      COALESCE(cap.overall_score, 0) AS overall_score,
+                      f.created_at
+               FROM favorites f
+               LEFT JOIN capabilities cap ON f.capability_slug = cap.slug
+               WHERE f.user_id = ?
+               ORDER BY f.created_at DESC LIMIT 5""",
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    return UserProfile(
+        username=user_row["username"],
+        created_at=user_row["created_at"],
+        stats={
+            "favorites": fav_count,
+            "comments": comment_count,
+            "submissions": submission_count,
+        },
+        recent_comments=[dict(r) for r in comment_rows],
+        recent_favorites=[dict(r) for r in fav_rows],
+    )
+
+
+# ── 评论点赞 ──────────────────────────────────────────────
+@router.post("/api/v1/comments/{comment_id}/like")
+def toggle_comment_like(comment_id: int, user: dict = Depends(_get_current_user)):
+    """切换评论点赞（需登录，toggle 逻辑）"""
+    conn = _get_conn()
+    try:
+        # 检查评论是否存在
+        comment = conn.execute(
+            "SELECT id FROM comments WHERE id = ?", (comment_id,)
+        ).fetchone()
+        if not comment:
+            raise HTTPException(status_code=404, detail="评论不存在")
+
+        # 检查是否已点赞
+        existing = conn.execute(
+            "SELECT id FROM comment_likes WHERE user_id = ? AND comment_id = ?",
+            (user["id"], comment_id),
+        ).fetchone()
+
+        if existing:
+            # 已点赞 → 取消
+            conn.execute("DELETE FROM comment_likes WHERE id = ?", (existing["id"],))
+            conn.commit()
+            action = "unliked"
+        else:
+            # 未点赞 → 添加
+            conn.execute(
+                "INSERT INTO comment_likes (user_id, comment_id) VALUES (?, ?)",
+                (user["id"], comment_id),
+            )
+            conn.commit()
+            action = "liked"
+
+        # 返回当前总点赞数
+        likes_count = conn.execute(
+            "SELECT COUNT(*) FROM comment_likes WHERE comment_id = ?", (comment_id,)
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+    return {"action": action, "comment_id": comment_id, "likes_count": likes_count}

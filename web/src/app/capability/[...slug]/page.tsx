@@ -38,6 +38,65 @@ export function generateMetadata({ params }: { params: Promise<{ slug: string[] 
   });
 }
 
+// 客户端徽章颜色映射
+const CLIENT_BADGE_STYLES: Record<string, string> = {
+  claude: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  cursor: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  vscode: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  windsurf: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+  cline: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+};
+
+const CLIENT_LABELS: Record<string, string> = {
+  claude: "Claude",
+  cursor: "Cursor",
+  vscode: "VS Code",
+  windsurf: "Windsurf",
+  cline: "Cline",
+};
+
+// 依赖列表组件（默认折叠，显示前 5 个）
+function DependenciesList({ deps }: { deps: string[] }) {
+  if (!deps || deps.length === 0) return null;
+  const visible = deps.slice(0, 5);
+  const rest = deps.slice(5);
+
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+      <h2 className="mb-3 text-lg font-semibold text-zinc-200">
+        主要依赖
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {visible.map((dep) => (
+          <span
+            key={dep}
+            className="rounded-md border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs font-mono text-zinc-300"
+          >
+            {dep}
+          </span>
+        ))}
+      </div>
+      {rest.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+            展开全部（还有 {rest.length} 个）
+          </summary>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {rest.map((dep) => (
+              <span
+                key={dep}
+                className="rounded-md border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs font-mono text-zinc-300"
+              >
+                {dep}
+              </span>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 // 分数条组件
 function ScoreBar({
   label,
@@ -147,9 +206,32 @@ export default async function CapabilityDetailPage({
                 {cap.source.toUpperCase()}
               </span>
               <ScoreBadge score={cap.overall_score} label="总分" size="lg" />
+              {cap.latest_version && (
+                <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-0.5 text-xs font-mono text-zinc-300">
+                  {cap.latest_version}
+                </span>
+              )}
               <FavoriteButton slug={fullSlug} />
               <CompareButton slug={fullSlug} />
             </div>
+
+            {/* 兼容性标签 */}
+            {cap.supported_clients && cap.supported_clients.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="text-xs text-zinc-500 self-center mr-1">兼容:</span>
+                {cap.supported_clients.map((client) => (
+                  <span
+                    key={client}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                      CLIENT_BADGE_STYLES[client] || "bg-zinc-800 text-zinc-400 border-zinc-700"
+                    }`}
+                  >
+                    {CLIENT_LABELS[client] || client}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <p className="mt-3 text-zinc-400 leading-relaxed">
               {cap.description}
             </p>
@@ -173,6 +255,11 @@ export default async function CapabilityDetailPage({
               </div>
             </div>
           </div>
+
+          {/* 依赖列表 */}
+          {cap.dependencies && cap.dependencies.length > 0 && (
+            <DependenciesList deps={cap.dependencies} />
+          )}
 
           {/* AI 分析 */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
@@ -274,6 +361,12 @@ export default async function CapabilityDetailPage({
                   {cap.has_typescript ? "有" : "无"}
                 </dd>
               </div>
+              {cap.latest_version && (
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">版本</dt>
+                  <dd className="text-zinc-300 font-mono text-xs">{cap.latest_version}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-zinc-500">更新时间</dt>
                 <dd className="text-zinc-300">

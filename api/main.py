@@ -1,8 +1,12 @@
 """AgentStore REST API — Agent 能力注册表 + 信誉系统"""
+import logging
 import math
-from fastapi import FastAPI, HTTPException, Query
+import time
+
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from .database import search_capabilities, get_capability, get_categories, get_stats, init_db
+from .database import search_capabilities, get_capability, get_categories, get_stats, init_db, log_usage, _get_conn, get_today_usage_count
+from .users import pwd_context
 from .users import router as users_router
 from .schemas import (
     SearchResponse,
@@ -76,6 +80,65 @@ app.add_middleware(
 
 
 app.include_router(users_router)
+
+logger = logging.getLogger("agentstore.usage")
+
+
+def _resolve_api_key(raw_key: str) -> dict | None:
+    """通过遍历活跃 key 验证 API Key（bcrypt 无法直接查询，需逐一比对）"""
+    if not raw_key or not raw_key.startswith("ask_"):
+        return None
+    # 用前缀缩小范围
+    prefix = raw_key[:8]
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT id, user_id, key_hash, daily_limit, is_active FROM api_keys WHERE key_prefix = ? AND is_active = 1",
+            (prefix,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    for row in rows:
+        if pwd_context.verify(raw_key, row["key_hash"]):
+            return dict(row)
+    return None
+
+
+@app.middleware("http")
+async def usage_tracking_middleware(request: Request, call_next):
+    """记录 /api/v1/ 路径的 API 调用，支持 X-API-Key 认证和限流"""
+    start = time.time()
+
+    # 如果有 X-API-Key header，先检查限流
+    api_key_header = request.headers.get("x-api-key", "")
+    api_key_record = None
+    if api_key_header and request.url.path.startswith("/api/v1/"):
+        api_key_record = _resolve_api_key(api_key_header)
+        if api_key_record:
+            daily_limit = api_key_record["daily_limit"]
+            if daily_limit != -1:  # -1 表示无限制
+                today_count = get_today_usage_count(api_key_record["id"])
+                if today_count >= daily_limit:
+                    return Response(
+                        content='{"detail":"API 调用次数已达今日上限"}',
+                        status_code=429,
+                        media_type="application/json",
+                    )
+
+    response = await call_next(request)
+    duration_ms = int((time.time() - start) * 1000)
+
+    # 只记录 /api/v1/ 路径的请求
+    if request.url.path.startswith("/api/v1/"):
+        try:
+            api_key_id = api_key_record["id"] if api_key_record else None
+            user_id = api_key_record["user_id"] if api_key_record else None
+            log_usage(api_key_id, user_id, request.url.path, request.method, response.status_code, duration_ms)
+        except Exception:
+            logger.exception("记录使用日志失败")
+
+    return response
 
 
 @app.on_event("startup")

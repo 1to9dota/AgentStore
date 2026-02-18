@@ -82,6 +82,7 @@ export interface Comment {
   content: string;
   rating: number;
   created_at: string;
+  likes_count: number;
 }
 
 /**
@@ -123,4 +124,61 @@ export async function getComments(slug: string): Promise<Comment[]> {
 
   const data = await res.json();
   return data.comments || [];
+}
+
+// ========== 用户 Profile ==========
+
+export interface UserProfile {
+  username: string;
+  created_at: string;
+  stats: { favorites: number; comments: number; submissions: number };
+  recent_comments: Array<{
+    slug: string;
+    content: string;
+    rating: number;
+    created_at: string;
+  }>;
+  recent_favorites: Array<{
+    slug: string;
+    name: string;
+    overall_score: number;
+    created_at: string;
+  }>;
+}
+
+/**
+ * 获取用户公开 Profile（无需登录）
+ */
+export async function getUserProfile(username: string): Promise<UserProfile> {
+  const res = await fetch(
+    `${API_URL}/api/v1/users/${encodeURIComponent(username)}/profile`
+  );
+
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("用户不存在");
+    throw new Error("获取用户资料失败");
+  }
+
+  return res.json();
+}
+
+// ========== 评论点赞 ==========
+
+/**
+ * 切换评论点赞（需登录）
+ */
+export async function toggleCommentLike(
+  commentId: number
+): Promise<{ action: string; likes_count: number }> {
+  const res = await fetchWithAuth(
+    `${API_URL}/api/v1/comments/${commentId}/like`,
+    { method: "POST" }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "操作失败");
+  }
+
+  return res.json();
 }

@@ -32,6 +32,9 @@ export interface Capability {
   install_guide: string;
   usage_guide: string;
   safety_notes: string;
+  dependencies: string[];
+  latest_version: string;
+  supported_clients: string[];
 }
 
 export const CATEGORIES: Record<string, string> = {
