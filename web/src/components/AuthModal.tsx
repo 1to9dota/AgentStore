@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { login, register } from "@/lib/auth";
 
 interface AuthModalProps {
@@ -20,7 +21,11 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!open) return null;
+  // Portal 挂载节点（SSR 安全：仅客户端使用）
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!open || !mounted) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +50,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end md:items-center md:justify-center md:p-4">
       {/* 遮罩层 */}
       <div
@@ -138,6 +143,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
