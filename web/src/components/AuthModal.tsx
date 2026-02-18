@@ -51,7 +51,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end md:items-center md:justify-center md:p-4">
+    <div className="fixed inset-0 z-[100] flex items-end md:items-center md:justify-center md:px-4 md:pt-14 md:pb-4">
       {/* 遮罩层 */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
